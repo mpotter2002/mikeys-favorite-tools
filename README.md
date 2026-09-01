@@ -1,36 +1,34 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Mikey's Favorite Tools
 
-## Getting Started
+Public catalog of design tools, agent tools, GitHub repos, skills/configs, inspo, and tools I made.
 
-First, run the development server:
+Live site: after Vercel is connected, this repo auto-deploys on every push to `main`.
+
+## Browse
+
+- **Tools and resources** — design, agents, GitHub, UI, research, infra
+- **Current stack** — what I am actually using right now
+- **Built by Mikey** — tools I made
+- **Skills** — markdown, YAML, JSON, configs, and skill packs
+- **Inspo** — sites and people I keep going back to
+
+The committed catalog lives in:
+
+- `src/data/tools.ts`
+- `src/data/inspo.ts`
+- `src/data/skills.ts`
+
+## Run locally
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Then open [http://127.0.0.1:3000](http://127.0.0.1:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Admin login is at `/admin`. Copy `.env.example` to `.env.local` and set `ADMIN_PASSWORD` / `ADMIN_SECRET` if you want to add or edit cards locally.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Adding tools
 
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+The in-browser add/edit UI writes to localStorage first. Use **Copy inbox JSON**, then paste the objects into the data files above so they ship with the repo.
