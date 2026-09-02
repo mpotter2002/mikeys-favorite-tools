@@ -984,6 +984,11 @@ export function Catalog() {
               defaultCategory={category || undefined}
               onAddCategory={(label) => addCategory(label, "", false)}
               onAddLane={(label, categoryId) => addSubcategory(label, categoryId, false)}
+              onDeleteCategory={deleteCategory}
+              onDeleteLane={deleteSubcategory}
+              onAddStatus={(label) => addStatus(label, false)}
+              onDeleteStatus={deleteStatus}
+              removableStatusIds={extraStatuses.map((item) => item.id)}
             />
           ) : null}
         </>
@@ -1088,6 +1093,11 @@ export function Catalog() {
               defaultCategory={category || undefined}
               onAddCategory={(label) => addCategory(label, "", false)}
               onAddLane={(label, categoryId) => addSubcategory(label, categoryId, false)}
+              onDeleteCategory={deleteCategory}
+              onDeleteLane={deleteSubcategory}
+              onAddStatus={(label) => addStatus(label, false)}
+              onDeleteStatus={deleteStatus}
+              removableStatusIds={extraStatuses.map((item) => item.id)}
             />
           ) : null}
         </>
@@ -1242,6 +1252,11 @@ export function Catalog() {
               defaultCategory={category || undefined}
               onAddCategory={(label) => addCategory(label, "", false)}
               onAddLane={(label, categoryId) => addSubcategory(label, categoryId, false)}
+              onDeleteCategory={deleteCategory}
+              onDeleteLane={deleteSubcategory}
+              onAddStatus={(label) => addStatus(label, false)}
+              onDeleteStatus={deleteStatus}
+              removableStatusIds={extraStatuses.map((item) => item.id)}
             />
           ) : null}
         </>

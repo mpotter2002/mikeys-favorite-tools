@@ -28,6 +28,11 @@ type Props = {
   defaultCategory?: string;
   onAddCategory?: (label: string) => string | null | undefined;
   onAddLane?: (label: string, categoryId: string) => string | null | undefined;
+  onDeleteCategory?: (id: string) => boolean | void;
+  onDeleteLane?: (id: string, categoryId: string, skipConfirm?: boolean) => boolean | void;
+  onAddStatus?: (label: string) => string | null | undefined;
+  onDeleteStatus?: (id: string) => boolean | void;
+  removableStatusIds?: string[];
 };
 
 const emptyDraft: ToolDraft = {
@@ -57,6 +62,11 @@ export function AddToolForm({
   defaultCategory,
   onAddCategory,
   onAddLane,
+  onDeleteCategory,
+  onDeleteLane,
+  onAddStatus,
+  onDeleteStatus,
+  removableStatusIds,
 }: Props) {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<ToolDraft>(emptyDraft);
@@ -174,6 +184,37 @@ export function AddToolForm({
     if (!added.length) return;
     setPickedSubcategories((current) => Array.from(new Set([...current, ...added])));
     setSubcategory(added[0]);
+  }
+
+  function deleteCategory(id: string) {
+    if (onDeleteCategory?.(id) === false) return;
+    const next = pickedCategories.filter((item) => item !== id);
+    setPickedCategories(next);
+    setPickedSubcategories((current) =>
+      current.filter((laneId) => next.some((categoryId) => (categoryLanes[categoryId] ?? []).some((lane) => lane.id === laneId))),
+    );
+    update("category", next[0] ?? "");
+  }
+
+  function deleteLane(id: string) {
+    if (!pickedCategories.length) return;
+    if (onDeleteLane?.(id, pickedCategories[0]) === false) return;
+    for (const categoryId of pickedCategories.slice(1)) onDeleteLane?.(id, categoryId, true);
+    setPickedSubcategories((current) => current.filter((item) => item !== id));
+    if (subcategory === id) setSubcategory("");
+  }
+
+  function addStatus(label: string) {
+    const id = onAddStatus?.(label);
+    if (!id) return;
+    update("status", id as ToolStatus);
+  }
+
+  function deleteStatus(id: string) {
+    if (onDeleteStatus?.(id) === false) return;
+    if (draft.status === id) {
+      update("status", (statuses.find((item) => item.id !== id)?.id ?? "watching") as ToolStatus);
+    }
   }
 
   function onSubmit(event: FormEvent) {
@@ -314,6 +355,7 @@ export function AddToolForm({
                 );
               }}
               onAdd={addCategory}
+              onRemove={deleteCategory}
               addLabel="New category"
             />
             <ChipPicks
@@ -324,18 +366,22 @@ export function AddToolForm({
               value={pickedSubcategories}
               onChange={setPickedSubcategories}
               onAdd={addLane}
+              onRemove={deleteLane}
               addLabel="New lane"
             />
-            <label>
-              Status
-              <select value={draft.status} onChange={(e) => update("status", e.target.value as ToolStatus)}>
-                {statuses.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.label}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <ChipPicks
+              legend="Status"
+              hint="Pick one. Use + to add a custom status."
+              wrap
+              single
+              options={statuses}
+              value={[draft.status]}
+              onChange={(next) => update("status", (next[0] ?? draft.status) as ToolStatus)}
+              onAdd={addStatus}
+              onRemove={deleteStatus}
+              removableIds={removableStatusIds}
+              addLabel="New status"
+            />
             <label className={draft.guessed.includes("tags") ? "guessed" : undefined}>
               Tags
               <input
