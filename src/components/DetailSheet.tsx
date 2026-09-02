@@ -146,9 +146,14 @@ export function DetailSheet({
 
   function onSubmit(event: FormEvent) {
     event.preventDefault();
-    if (selection?.type === "tool") onSaveTool?.(draft as Tool);
-    if (selection?.type === "inspo") onSaveInspo?.(draft as Inspo);
-    if (selection?.type === "skill") onSaveSkill?.(draft as Skill);
+    if (!draft) return;
+    const savedDraft = {
+      ...draft,
+      tags: Array.from(new Set(draft.tags.map((tag) => tag.trim()).filter(Boolean))),
+    };
+    if (selection?.type === "tool") onSaveTool?.(savedDraft as Tool);
+    if (selection?.type === "inspo") onSaveInspo?.(savedDraft as Inspo);
+    if (selection?.type === "skill") onSaveSkill?.(savedDraft as Skill);
     setEditing(false);
   }
 
@@ -398,11 +403,11 @@ export function DetailSheet({
               <label>
                 Tags
                 <input
-                  value={draft.tags.join(", ")}
+                  value={draft.tags.join(",")}
                   onChange={(e) =>
                     setDraft({
                       ...draft,
-                      tags: e.target.value.split(",").map((tag) => tag.trim()).filter(Boolean),
+                      tags: e.target.value.split(","),
                     })
                   }
                 />

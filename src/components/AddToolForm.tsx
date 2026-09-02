@@ -54,7 +54,7 @@ export function AddToolForm({ onAdd, categories = CATEGORIES, kinds = KINDS, sta
   const [pickedCategories, setPickedCategories] = useState<string[]>([defaultCategory && defaultCategory !== "all" ? defaultCategory : "ui"]);
   const [pickedSubcategories, setPickedSubcategories] = useState<string[]>([]);
 
-  const tags = useMemo(() => draft.tags.join(", "), [draft.tags]);
+  const tags = useMemo(() => draft.tags.join(","), [draft.tags]);
   const categoryLaneOptions = Array.from(
     new Map(
       pickedCategories.flatMap((id) => (categoryLanes[id] ?? []).map((item) => [item.id, item])),
@@ -296,7 +296,7 @@ export function AddToolForm({ onAdd, categories = CATEGORIES, kinds = KINDS, sta
                 onChange={(e) =>
                   update(
                     "tags",
-                    e.target.value.split(",").map((tag) => tag.trim()).filter(Boolean),
+                    e.target.value.split(","),
                   )
                 }
                 placeholder="github, agents, sdk"

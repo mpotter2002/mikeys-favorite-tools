@@ -32,7 +32,7 @@ export function AddInspoForm({ onAdd }: Props) {
   const [looking, setLooking] = useState(false);
   const [error, setError] = useState("");
   const [lanes, setLanes] = useState<Lane[]>(["inspo"]);
-  const tags = useMemo(() => draft.tags.join(", "), [draft.tags]);
+  const tags = useMemo(() => draft.tags.join(","), [draft.tags]);
 
   function update<K extends keyof InspoDraft>(key: K, value: InspoDraft[K]) {
     setDraft((current) => ({
@@ -168,7 +168,7 @@ export function AddInspoForm({ onAdd }: Props) {
                 onChange={(e) =>
                   update(
                     "tags",
-                    e.target.value.split(",").map((tag) => tag.trim()).filter(Boolean),
+                    e.target.value.split(","),
                   )
                 }
                 placeholder="web, motion, brand"

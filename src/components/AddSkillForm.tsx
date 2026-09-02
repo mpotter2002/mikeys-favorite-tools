@@ -33,7 +33,7 @@ export function AddSkillForm({ onAdd }: Props) {
   const [looking, setLooking] = useState(false);
   const [error, setError] = useState("");
   const [lanes, setLanes] = useState<Lane[]>(["skills"]);
-  const tags = useMemo(() => draft.tags.join(", "), [draft.tags]);
+  const tags = useMemo(() => draft.tags.join(","), [draft.tags]);
 
   function update<K extends keyof SkillDraft>(key: K, value: SkillDraft[K]) {
     setDraft((current) => ({
@@ -181,7 +181,7 @@ export function AddSkillForm({ onAdd }: Props) {
                 onChange={(e) =>
                   update(
                     "tags",
-                    e.target.value.split(",").map((tag) => tag.trim()).filter(Boolean),
+                    e.target.value.split(","),
                   )
                 }
                 placeholder="markdown, claude, design"
