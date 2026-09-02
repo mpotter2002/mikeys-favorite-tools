@@ -713,6 +713,20 @@ export function Catalog() {
         : [],
     [stackTools, query, category, toolsReady, subcategory],
   );
+  const cardsOnCurrentPage = useMemo(() => {
+    if (lane === "all") return allTools;
+    if (lane === "tools") return catalogTools;
+    if (lane === "stack") return stackTools;
+    if (lane === "mine") return mineTools;
+    if (lane === "skills") return agentTools;
+    return [];
+  }, [lane, allTools, catalogTools, stackTools, mineTools, agentTools]);
+  const pageCategories = useMemo(() => {
+    const ids = new Set(cardsOnCurrentPage.flatMap((item) => categoriesOf(item)));
+    // Keep an active category available to an admin while they are creating its first card.
+    if (admin && category && category !== "all") ids.add(category);
+    return categories.filter((item) => item.id === "all" || ids.has(item.id));
+  }, [cardsOnCurrentPage, categories, category, admin]);
   const showing = lane === "all" ? visibleAll : lane === "inspo" ? visibleInspo : lane === "mine" ? visibleMine : lane === "stack" ? visibleStack : lane === "skills" ? visibleAgents : visibleTools;
   const currentInbox = lane === "all" ? [...inbox, ...inspoInbox, ...skillInbox] : lane === "inspo" ? inspoInbox : lane === "skills" ? [...inbox.filter((item) => lanesOfTool(item).includes("skills")), ...skillInbox] : inbox;
   const browseReady = lane === "inspo" ? inspoReady : toolsReady;
@@ -868,7 +882,7 @@ export function Catalog() {
         <>
           <p className="hint category-desc">What I am actually using right now. Pick a category, or All to see the whole stack.</p>
           <div className="cats">
-            {categories.map((item) => (
+            {pageCategories.map((item) => (
               <CategoryChip
                 key={item.id}
                 item={item}
@@ -961,7 +975,7 @@ export function Catalog() {
         <>
           <p className="hint category-desc">Tools I made — pick a category, or All to see the whole set.</p>
           <div className="cats">
-            {categories.map((item) => (
+            {pageCategories.map((item) => (
               <CategoryChip
                 key={item.id}
                 item={item}
@@ -1053,7 +1067,7 @@ export function Catalog() {
       ) : lane === "tools" || lane === "skills" || lane === "all" ? (
         <>
           <div className="cats">
-            {categories.map((item) => (
+            {pageCategories.map((item) => (
               <CategoryChip
                 key={item.id}
                 item={item}
