@@ -1005,8 +1005,5 @@ a.ghost,
   display: block;
   width: 42px;
   height: 42px;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  object-fit: cover;
-  background: var(--card);
+  object-fit: contain;
 }
