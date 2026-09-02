@@ -292,6 +292,23 @@ export function DetailSheet({
                   required
                 />
               </label>
+              {selection.type === "tool" && !(draft as Tool).command && !isCommandValue(draft.url) ? (
+                <label className="span-2">
+                  GitHub repo (optional)
+                  <input
+                    value={(draft as Tool).repo ?? ""}
+                    onChange={(e) => {
+                      const value = e.target.value.trim();
+                      const parsed = parseGithubRepo(value);
+                      setDraft({
+                        ...(draft as Tool),
+                        repo: parsed?.full ?? value.replace(/^https?:\/\/(?:www\.)?github\.com\//i, "").replace(/\/+$/, ""),
+                      });
+                    }}
+                    placeholder="owner/repo or https://github.com/owner/repo"
+                  />
+                </label>
+              ) : null}
               <label>
                 Description
                 <input

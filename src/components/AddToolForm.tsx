@@ -5,6 +5,7 @@ import type { Category, InboxTool, Lane, Option, ToolKind, ToolSource, ToolStatu
 import { CATEGORIES, KINDS, STATUSES } from "@/lib/types";
 import { LanePicks } from "@/components/LanePicks";
 import { ChipPicks } from "@/components/ChipPicks";
+import { parseGithubRepo } from "@/lib/search";
 import {
   applyLookup,
   draftToId,
@@ -260,7 +261,7 @@ export function AddToolForm({
               />
             </label>
             <label className={draft.guessed.includes("url") ? "guessed" : undefined}>
-              {draft.command ? "Command" : "URL or GitHub repo"}
+              {draft.command ? "Command" : "Website / URL"}
               <input
                 value={draft.command || draft.url}
                 onChange={(e) => {
@@ -272,10 +273,24 @@ export function AddToolForm({
                   update("url", value);
                   update("command", undefined as never);
                 }}
-                placeholder={draft.command ? "npx some-agent-plugin" : "https://github.com/vercel/ai"}
+                placeholder={draft.command ? "npx some-agent-plugin" : "https://example.com"}
                 required
               />
             </label>
+            {!draft.command ? (
+              <label className="span-2">
+                GitHub repo (optional)
+                <input
+                  value={draft.repo ?? ""}
+                  onChange={(e) => {
+                    const value = e.target.value.trim();
+                    const repo = parseGithubRepo(value);
+                    update("repo", repo?.full ?? value.replace(/^https?:\/\/(?:www\.)?github\.com\//i, "").replace(/\/+$/, ""));
+                  }}
+                  placeholder="owner/repo or https://github.com/owner/repo"
+                />
+              </label>
+            ) : null}
             <label className={`span-2 ${draft.guessed.includes("description") ? "guessed" : ""}`}>
               Why it is here
               <input
