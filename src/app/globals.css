@@ -107,10 +107,10 @@ body {
 
 h1 {
   margin: 0;
-  max-width: 12ch;
-  font-size: clamp(36px, 5.4vw, 64px);
-  line-height: 0.92;
+  font-size: clamp(28px, 4.8vw, 64px);
+  line-height: 1;
   letter-spacing: -0.05em;
+  white-space: nowrap;
 }
 
 .lede {
