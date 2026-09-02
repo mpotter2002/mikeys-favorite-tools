@@ -799,7 +799,7 @@ export function Catalog() {
       <header className="hero">
         <div className="hero-copy">
           <p className="kicker">Personal stack</p>
-          <h1>Mikey&apos;s Favorite Tools</h1>
+          <h1>Mikey&apos;s Favorite Things</h1>
           <p className="lede">
             One place for the design tools, agent tools, GitHub repos, what I am using right now, the tools I made, skills and configs, and the sites and people I keep going back to for inspo.
           </p>
@@ -974,7 +974,17 @@ export function Catalog() {
             </div>
           ) : null}
           {admin ? (
-            <AddToolForm onAdd={addTool} categories={categories} kinds={kinds} statuses={statuses} categoryLanes={categoryLanes} defaultLanes={["stack"]} defaultCategory={category || undefined} />
+            <AddToolForm
+              onAdd={addTool}
+              categories={categories}
+              kinds={kinds}
+              statuses={statuses}
+              categoryLanes={categoryLanes}
+              defaultLanes={["stack"]}
+              defaultCategory={category || undefined}
+              onAddCategory={(label) => addCategory(label, "", false)}
+              onAddLane={(label, categoryId) => addSubcategory(label, categoryId, false)}
+            />
           ) : null}
         </>
       ) : lane === "mine" ? (
@@ -1067,7 +1077,18 @@ export function Catalog() {
             </div>
           ) : null}
           {admin ? (
-            <AddToolForm onAdd={addTool} categories={categories} kinds={kinds} statuses={statuses} categoryLanes={categoryLanes} defaultSource="mine" defaultLanes={["mine"]} defaultCategory={category || undefined} />
+            <AddToolForm
+              onAdd={addTool}
+              categories={categories}
+              kinds={kinds}
+              statuses={statuses}
+              categoryLanes={categoryLanes}
+              defaultSource="mine"
+              defaultLanes={["mine"]}
+              defaultCategory={category || undefined}
+              onAddCategory={(label) => addCategory(label, "", false)}
+              onAddLane={(label, categoryId) => addSubcategory(label, categoryId, false)}
+            />
           ) : null}
         </>
       ) : lane === "tools" || lane === "skills" || lane === "all" ? (
@@ -1219,6 +1240,8 @@ export function Catalog() {
               categoryLanes={categoryLanes}
               defaultLanes={lane === "skills" ? ["skills"] : ["tools"]}
               defaultCategory={category || undefined}
+              onAddCategory={(label) => addCategory(label, "", false)}
+              onAddLane={(label, categoryId) => addSubcategory(label, categoryId, false)}
             />
           ) : null}
         </>

@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Mikey's Favorite Tools",
+  title: "Mikey's Favorite Things",
   description: "Mikey's personal catalog of design tools, agent tools, and GitHub repos.",
 };
 

@@ -25,6 +25,8 @@ type Props = {
   defaultSource?: ToolSource;
   defaultLanes?: Lane[];
   defaultCategory?: string;
+  onAddCategory?: (label: string) => string | null | undefined;
+  onAddLane?: (label: string, categoryId: string) => string | null | undefined;
 };
 
 const emptyDraft: ToolDraft = {
@@ -43,7 +45,18 @@ function pluginLaneId(categoryLanes: Record<string, Option[]>) {
   return (categoryLanes.agent ?? []).find((item) => item.id === "plugins" || item.label.toLowerCase() === "plugins")?.id ?? "plugins";
 }
 
-export function AddToolForm({ onAdd, categories = CATEGORIES, kinds = KINDS, statuses = STATUSES, categoryLanes = {}, defaultSource, defaultLanes, defaultCategory }: Props) {
+export function AddToolForm({
+  onAdd,
+  categories = CATEGORIES,
+  kinds = KINDS,
+  statuses = STATUSES,
+  categoryLanes = {},
+  defaultSource,
+  defaultLanes,
+  defaultCategory,
+  onAddCategory,
+  onAddLane,
+}: Props) {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<ToolDraft>(emptyDraft);
   const [dragging, setDragging] = useState(false);
@@ -142,6 +155,24 @@ export function AddToolForm({ onAdd, categories = CATEGORIES, kinds = KINDS, sta
     }
     const url = extractUrlFromText(value);
     if (url) void fillFromUrl(url);
+  }
+
+  function addCategory(label: string) {
+    const id = onAddCategory?.(label);
+    if (!id) return;
+    const next = pickedCategories.includes(id) ? pickedCategories : [...pickedCategories, id];
+    setPickedCategories(next);
+    update("category", next[0] ?? draft.category);
+  }
+
+  function addLane(label: string) {
+    if (!label.trim() || !pickedCategories.length) return;
+    const added = pickedCategories
+      .map((categoryId) => onAddLane?.(label, categoryId))
+      .filter((id): id is string => Boolean(id));
+    if (!added.length) return;
+    setPickedSubcategories((current) => Array.from(new Set([...current, ...added])));
+    setSubcategory(added[0]);
   }
 
   function onSubmit(event: FormEvent) {
@@ -267,19 +298,19 @@ export function AddToolForm({ onAdd, categories = CATEGORIES, kinds = KINDS, sta
                   current.filter((id) => next.some((cat) => (categoryLanes[cat] ?? []).some((lane) => lane.id === id))),
                 );
               }}
+              onAdd={addCategory}
+              addLabel="New category"
             />
-            {categoryLaneOptions.length ? (
-              <ChipPicks
-                legend="Lanes in these categories"
-                hint="Optional. Only shows lanes you have added."
-                wrap
-                options={categoryLaneOptions}
-                value={pickedSubcategories}
-                onChange={setPickedSubcategories}
-              />
-            ) : (
-              <p className="hint span-2">No category lanes yet. Add them after you pick a category on the page.</p>
-            )}
+            <ChipPicks
+              legend="Lanes in these categories"
+              hint={categoryLaneOptions.length ? "Optional. Only shows lanes you have added." : "No category lanes yet. Use + to add one."}
+              wrap
+              options={categoryLaneOptions}
+              value={pickedSubcategories}
+              onChange={setPickedSubcategories}
+              onAdd={addLane}
+              addLabel="New lane"
+            />
             <label>
               Status
               <select value={draft.status} onChange={(e) => update("status", e.target.value as ToolStatus)}>

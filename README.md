@@ -1,4 +1,4 @@
-# Mikey's Favorite Tools
+# Mikey's Favorite Things
 
 Public catalog of design tools, agent tools, GitHub repos, skills/configs, inspo, and tools I made.
 
