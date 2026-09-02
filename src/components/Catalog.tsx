@@ -215,7 +215,7 @@ export function Catalog() {
     [tools, skillsRaw, inspoRaw],
   );
   const catalogTools = useMemo(
-    () => tools.filter((tool) => lanesOfTool(tool).includes("tools") && !isMineTool(tool)),
+    () => tools.filter((tool) => lanesOfTool(tool).includes("tools")),
     [tools],
   );
   const searching = query.trim().length > 0;
@@ -230,7 +230,7 @@ export function Catalog() {
             kind,
             status,
             githubOnly,
-            excludeMine: true,
+            excludeMine: false,
             subcategory,
           })
         : [],

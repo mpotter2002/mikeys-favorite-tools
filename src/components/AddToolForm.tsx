@@ -253,6 +253,7 @@ export function AddToolForm({ onAdd, categories = CATEGORIES, kinds = KINDS, sta
                 placeholder="Fill in anything the drop did not catch"
               />
             </label>
+            <LanePicks value={lanes} onChange={setLanes} />
             <ChipPicks
               legend="Categories"
               hint="Pick one or more. A card can live in GitHub and UI."
@@ -302,7 +303,6 @@ export function AddToolForm({ onAdd, categories = CATEGORIES, kinds = KINDS, sta
                 placeholder="github, agents, sdk"
               />
             </label>
-            <LanePicks value={lanes} onChange={setLanes} />
           </div>
           <p className="hint">
             {looking
