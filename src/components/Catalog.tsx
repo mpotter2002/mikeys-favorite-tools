@@ -314,6 +314,7 @@ export function Catalog() {
         description: useIncomingDescription ? preparedTool.description : matchingMineTool.description,
         tags: Array.from(new Set([...matchingMineTool.tags, ...preparedTool.tags, "mine"])),
         source: "mine",
+        lanes: preparedTool.lanes,
       };
       const nextEdits = { ...toolEdits, [combinedTool.id]: combinedTool };
       setToolEdits(nextEdits);
@@ -324,8 +325,8 @@ export function Catalog() {
         return next;
       });
       unhideItem(combinedTool.id);
-      setLane("mine");
-      setCategory(categoriesOf(combinedTool)[0] ?? "");
+      setLane(combinedTool.lanes?.length ? combinedTool.lanes[0] : "all");
+      setCategory(combinedTool.lanes?.length ? categoriesOf(combinedTool)[0] ?? "" : "all");
       setSubcategory("all");
       setQuery("");
       setKind("all");
@@ -354,8 +355,8 @@ export function Catalog() {
     unhideItem(nextTool.id);
 
     const savedLanes = lanesOfTool(nextTool);
-    const targetLane = lane !== "all" && savedLanes.includes(lane) ? lane : savedLanes[0] ?? "tools";
-    const targetCategory = categoriesOf(nextTool)[0] ?? "";
+    const targetLane = savedLanes.length ? (lane !== "all" && savedLanes.includes(lane) ? lane : savedLanes[0]) : "all";
+    const targetCategory = savedLanes.length ? categoriesOf(nextTool)[0] ?? "" : "all";
 
     setLane(targetLane);
     setCategory(targetCategory);

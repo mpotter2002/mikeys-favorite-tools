@@ -23,7 +23,7 @@ export function LanePicks({
           </label>
         ))}
       </div>
-      <p className="hint">A card can live in more than one place.</p>
+      <p className="hint">Optional — a card can live in more than one place, or only appear in All.</p>
     </fieldset>
   );
 }

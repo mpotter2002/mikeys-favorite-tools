@@ -18,21 +18,21 @@ export function isMineLike(tool: Pick<Tool, "source" | "tags">) {
 }
 
 export function lanesOfTool(tool: Pick<Tool, "source" | "tags" | "lanes">): Lane[] {
-  if (tool.lanes?.length) return uniqueLanes(tool.lanes);
+  if (tool.lanes) return uniqueLanes(tool.lanes);
   return isMineLike(tool) ? ["mine"] : ["tools"];
 }
 
 export function lanesOfSkill(item: Pick<Skill, "lanes">): Lane[] {
-  return item.lanes?.length ? uniqueLanes(item.lanes) : ["skills"];
+  return item.lanes ? uniqueLanes(item.lanes) : ["skills"];
 }
 
 export function lanesOfInspo(item: Pick<Inspo, "lanes">): Lane[] {
-  return item.lanes?.length ? uniqueLanes(item.lanes) : ["inspo"];
+  return item.lanes ? uniqueLanes(item.lanes) : ["inspo"];
 }
 
 export function toggleLane(current: Lane[], id: Lane): Lane[] {
   const next = current.includes(id) ? current.filter((lane) => lane !== id) : [...current, id];
-  return uniqueLanes(next.length ? next : current);
+  return uniqueLanes(next);
 }
 
 export function toolToSkill(tool: Tool): Skill {
