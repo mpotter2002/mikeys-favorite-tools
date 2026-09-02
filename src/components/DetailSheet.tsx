@@ -384,6 +384,7 @@ export function DetailSheet({
                         : "No category lanes yet."
                     }
                     wrap
+                    allowEmpty
                     options={Array.from(
                       new Map(
                         categoriesOf(draft as Tool).flatMap((id) => (categoryLanes[id] ?? []).map((item) => [item.id, item])),

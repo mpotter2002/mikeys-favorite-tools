@@ -10,6 +10,7 @@ export function ChipPicks({
   onChange,
   wrap = false,
   single = false,
+  allowEmpty = false,
   onAdd,
   onRemove,
   removableIds,
@@ -22,6 +23,7 @@ export function ChipPicks({
   onChange: (next: string[]) => void;
   wrap?: boolean;
   single?: boolean;
+  allowEmpty?: boolean;
   onAdd?: (label: string) => void;
   onRemove?: (id: string) => void;
   removableIds?: string[];
@@ -42,7 +44,7 @@ export function ChipPicks({
       return;
     }
     const next = value.includes(id) ? value.filter((item) => item !== id) : [...value, id];
-    if (!next.length) return;
+    if (!next.length && !allowEmpty) return;
     onChange(next);
   }
 

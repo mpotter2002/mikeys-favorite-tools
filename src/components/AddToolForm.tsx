@@ -362,6 +362,7 @@ export function AddToolForm({
               legend="Lanes in these categories"
               hint={categoryLaneOptions.length ? "Optional. Only shows lanes you have added." : "No category lanes yet. Use + to add one."}
               wrap
+              allowEmpty
               options={categoryLaneOptions}
               value={pickedSubcategories}
               onChange={setPickedSubcategories}
