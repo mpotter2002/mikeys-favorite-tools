@@ -32,6 +32,8 @@ type Props = {
   onDeleteLane?: (id: string, categoryId?: string, skipConfirm?: boolean) => boolean | void;
   onDeleteItem?: () => void;
   onAddStatus?: (label: string) => string | null | undefined;
+  onDeleteStatus?: (id: string) => boolean | void;
+  removableStatusIds?: string[];
 };
 
 function labelOf(options: Option[], id: string) {
@@ -55,6 +57,8 @@ export function DetailSheet({
   onDeleteLane,
   onDeleteItem,
   onAddStatus,
+  onDeleteStatus,
+  removableStatusIds,
 }: Props) {
   const item = selection?.item;
   const url = item?.url ?? "";
@@ -185,6 +189,16 @@ export function DetailSheet({
     setDraft({
       ...(draft as Tool),
       status: id,
+    });
+  }
+
+  function deleteStatusFromSheet(id: string) {
+    if (onDeleteStatus?.(id) === false) return;
+    if (!draft) return;
+    const fallback = statuses.find((item) => item.id !== id)?.id ?? "watching";
+    setDraft({
+      ...(draft as Tool),
+      status: ((draft as Tool).status === id ? fallback : (draft as Tool).status) as ToolStatus,
     });
   }
 
@@ -364,6 +378,8 @@ export function DetailSheet({
                       })
                     }
                     onAdd={addStatusFromSheet}
+                    onRemove={deleteStatusFromSheet}
+                    removableIds={removableStatusIds}
                     addLabel="New status"
                   />
                 </>

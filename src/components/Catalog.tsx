@@ -337,6 +337,18 @@ export function Catalog() {
     return option.id;
   }
 
+  function deleteStatus(id: string) {
+    if (!extraStatuses.some((item) => item.id === id)) return false;
+    if (!window.confirm("Delete this custom status? Cards will stay in the catalog.")) return false;
+    setExtraStatuses((current) => {
+      const next = current.filter((item) => item.id !== id);
+      writeExtraStatuses(next);
+      return next;
+    });
+    if (status === id) setStatus("all");
+    return true;
+  }
+
   function addKind(label: string) {
     const option = addOption(label, extraKinds, KINDS);
     if (!option || typeof option === "string") {
@@ -999,14 +1011,25 @@ export function Catalog() {
                   Any status
                 </button>
                 {statuses.map((item) => (
-                  <button
-                    key={item.id}
-                    type="button"
-                    className={status === item.id ? "chip on" : "chip"}
-                    onClick={() => setStatus(item.id)}
-                  >
-                    {item.label}
-                  </button>
+                  <div key={item.id} className={`chip-wrap ${status === item.id ? "on" : ""}`}>
+                    <button
+                      type="button"
+                      className={status === item.id ? "chip on" : "chip"}
+                      onClick={() => setStatus(item.id)}
+                    >
+                      {item.label}
+                    </button>
+                    {admin && extraStatuses.some((entry) => entry.id === item.id) ? (
+                      <button
+                        type="button"
+                        className="chip-x"
+                        aria-label={`Delete ${item.label}`}
+                        onClick={() => deleteStatus(item.id)}
+                      >
+                        ×
+                      </button>
+                    ) : null}
+                  </div>
                 ))}
                 {admin ? (
                   <form
@@ -1145,6 +1168,8 @@ export function Catalog() {
         onDeleteLane={deleteSubcategory}
         onDeleteItem={deleteSelected}
         onAddStatus={(label) => addStatus(label, false)}
+        onDeleteStatus={deleteStatus}
+        removableStatusIds={extraStatuses.map((item) => item.id)}
       />
     </div>
   );

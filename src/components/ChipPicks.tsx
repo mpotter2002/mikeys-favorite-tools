@@ -12,6 +12,7 @@ export function ChipPicks({
   single = false,
   onAdd,
   onRemove,
+  removableIds,
   addLabel = "Add",
 }: {
   legend: string;
@@ -23,6 +24,7 @@ export function ChipPicks({
   single?: boolean;
   onAdd?: (label: string) => void;
   onRemove?: (id: string) => void;
+  removableIds?: string[];
   addLabel?: string;
 }) {
   const [adding, setAdding] = useState(false);
@@ -55,11 +57,14 @@ export function ChipPicks({
     <fieldset className={`lane-picks span-2 ${wrap ? "wrap" : ""}`}>
       <legend>{legend}</legend>
       <div className={wrap ? "lane-pick-row wrap" : "lane-pick-row"}>
-        {options.map((item) => (
-          <label key={item.id} className={`${value.includes(item.id) ? "on" : ""} ${onRemove ? "has-x" : ""}`.trim()}>
+        {options.map((item) => {
+          const removable = Boolean(onRemove && (!removableIds || removableIds.includes(item.id)));
+
+          return (
+          <label key={item.id} className={`${value.includes(item.id) ? "on" : ""} ${removable ? "has-x" : ""}`.trim()}>
             <input type="checkbox" checked={value.includes(item.id)} onChange={() => toggle(item.id)} />
             <span>{item.label}</span>
-            {onRemove ? (
+            {removable ? (
               <button
                 type="button"
                 className="chip-x"
@@ -67,14 +72,15 @@ export function ChipPicks({
                 onClick={(event) => {
                   event.preventDefault();
                   event.stopPropagation();
-                  onRemove(item.id);
+                  onRemove?.(item.id);
                 }}
               >
                 ×
               </button>
             ) : null}
           </label>
-        ))}
+          );
+        })}
         {onAdd ? (
           adding ? (
             <div className="chip-add">
