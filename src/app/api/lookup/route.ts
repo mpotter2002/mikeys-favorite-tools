@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { guessFromUrl, type ToolDraft } from "@/lib/guess";
+import { parseGithubRepo } from "@/lib/search";
 
 export type LookupResponse = ToolDraft;
 
@@ -11,11 +12,23 @@ export async function GET(request: NextRequest) {
 
   const draft = guessFromUrl(url);
   try {
-    const extra = draft.repo ? await lookupGithub(draft.repo) : await lookupPage(draft.url);
+    const extra = draft.repo ? await lookupGithub(draft.repo) : await lookupPageWithGithub(draft.url);
     return Response.json(mergeDraft(draft, extra));
   } catch {
     return Response.json(draft);
   }
+}
+
+async function lookupPageWithGithub(url: string): Promise<Partial<ToolDraft> & { image?: string }> {
+  const page = await lookupPage(url);
+  if (!page.repo) return page;
+
+  const github = await lookupGithub(page.repo);
+  return {
+    ...github,
+    ...page,
+    tags: Array.from(new Set([...(github.tags ?? []), ...(page.tags ?? [])])),
+  };
 }
 
 function mergeDraft(draft: ToolDraft, extra: Partial<ToolDraft> & { image?: string }): LookupResponse & { image?: string } {
@@ -99,15 +112,34 @@ function parseHtml(html: string, pageUrl: string): Partial<ToolDraft> & { image?
     decode(html.match(/<title[^>]*>([^<]+)<\/title>/i)?.[1] ?? "");
   const description = meta(html, ["og:description", "description", "twitter:description"]);
   const image = absoluteUrl(meta(html, ["og:image", "twitter:image", "og:image:url"]), pageUrl);
+  const repo = githubRepoFromHtml(html, pageUrl);
   const guessed = [];
   if (title) guessed.push("name");
   if (description) guessed.push("description");
   return {
     name: cleanTitle(title),
     description,
+    repo,
     guessed,
     image,
   };
+}
+
+function githubRepoFromHtml(html: string, pageUrl: string) {
+  const candidates = new Map<string, { repo: string; score: number }>();
+  const anchorPattern = /<a\b[^>]*\bhref=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi;
+
+  for (const match of html.matchAll(anchorPattern)) {
+    const repo = parseGithubRepo(absoluteUrl(match[1], pageUrl));
+    if (!repo) continue;
+    const label = decode(match[2].replace(/<[^>]*>/g, " ")).toLowerCase();
+    const score = /\b(source|github|repo|repository|open source)\b/.test(label) ? 2 : 1;
+    const current = candidates.get(repo.full);
+    if (!current || score > current.score) candidates.set(repo.full, { repo: repo.full, score });
+  }
+
+  if (!candidates.size) return undefined;
+  return [...candidates.values()].sort((a, b) => b.score - a.score)[0]?.repo;
 }
 
 function absoluteUrl(value: string, pageUrl: string) {
