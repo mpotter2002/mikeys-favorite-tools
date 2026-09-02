@@ -10,6 +10,7 @@ const KINDS_KEY = "toolfolio.kinds.v1";
 const SKILL_KEY = "toolfolio.skills.v1";
 const SKILL_EDITS_KEY = "toolfolio.skill-edits.v1";
 const CATEGORY_LANES_KEY = "toolfolio.category-lanes.v1";
+const CATEGORY_LABELS_KEY = "toolfolio.category-labels.v1";
 const HIDDEN_CATEGORIES_KEY = "toolfolio.hidden-categories.v1";
 const HIDDEN_ITEMS_KEY = "toolfolio.hidden-items.v1";
 
@@ -122,6 +123,18 @@ export function readCategoryLanes(): Record<string, Option[]> {
 
 export function writeCategoryLanes(lanes: Record<string, Option[]>) {
   window.localStorage.setItem(CATEGORY_LANES_KEY, JSON.stringify(lanes));
+}
+
+export function readCategoryLabels(): Record<string, string> {
+  const parsed = readJson<Record<string, string>>(CATEGORY_LABELS_KEY, {});
+  if (!parsed || typeof parsed !== "object") return {};
+  return Object.fromEntries(
+    Object.entries(parsed).filter(([id, label]) => typeof id === "string" && id && typeof label === "string" && label.trim()),
+  );
+}
+
+export function writeCategoryLabels(labels: Record<string, string>) {
+  window.localStorage.setItem(CATEGORY_LABELS_KEY, JSON.stringify(labels));
 }
 
 export function readHiddenCategories(): string[] {

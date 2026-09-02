@@ -28,6 +28,7 @@ import {
   applyEdits,
   readExtraCategories,
   readCategoryLanes,
+  readCategoryLabels,
   readExtraKinds,
   readExtraStatuses,
   readHiddenCategories,
@@ -40,6 +41,7 @@ import {
   readToolEdits,
   writeExtraCategories,
   writeCategoryLanes,
+  writeCategoryLabels,
   writeExtraKinds,
   writeExtraStatuses,
   writeHiddenCategories,
@@ -109,6 +111,7 @@ export function Catalog() {
   const [extraStatuses, setExtraStatuses] = useState<Option[]>([]);
   const [extraKinds, setExtraKinds] = useState<Option[]>([]);
   const [categoryLanes, setCategoryLanes] = useState<Record<string, Option[]>>({});
+  const [categoryLabels, setCategoryLabels] = useState<Record<string, string>>({});
   const [hiddenCategories, setHiddenCategories] = useState<string[]>([]);
   const [hiddenItems, setHiddenItems] = useState<string[]>([]);
   const [newCategory, setNewCategory] = useState("");
@@ -131,6 +134,7 @@ export function Catalog() {
     setExtraStatuses(readExtraStatuses());
     setExtraKinds(readExtraKinds());
     setCategoryLanes(readCategoryLanes());
+    setCategoryLabels(readCategoryLabels());
     setHiddenCategories(readHiddenCategories());
     setHiddenItems(readHiddenItems());
     fetch("/api/admin/session")
@@ -271,8 +275,10 @@ export function Catalog() {
   const categories = useMemo(() => {
     const seen = new Set(CATEGORIES.map((item) => item.id));
     const extras = extraCategories.filter((item) => item.id !== "all" && !seen.has(item.id));
-    return [...CATEGORIES, ...extras].filter((item) => item.id === "all" || !hiddenCategories.includes(item.id));
-  }, [extraCategories, hiddenCategories]);
+    return [...CATEGORIES, ...extras]
+      .filter((item) => item.id === "all" || !hiddenCategories.includes(item.id))
+      .map((item) => ({ ...item, label: categoryLabels[item.id]?.trim() || item.label }));
+  }, [extraCategories, hiddenCategories, categoryLabels]);
   const statuses = useMemo(() => {
     const seen = new Set(STATUSES.map((item) => item.id));
     return [...STATUSES, ...extraStatuses.filter((item) => !seen.has(item.id))];
@@ -560,6 +566,40 @@ export function Catalog() {
     return true;
   }
 
+  function renameCategory(id: string, currentLabel: string) {
+    if (!id || id === "all") return;
+    const label = window.prompt("Rename category", currentLabel)?.trim();
+    if (!label || label === currentLabel) return;
+    if (categories.some((item) => item.id !== id && item.label.toLowerCase() === label.toLowerCase())) {
+      window.alert("A category with that name already exists.");
+      return;
+    }
+    setCategoryLabels((current) => {
+      const next = { ...current, [id]: label };
+      writeCategoryLabels(next);
+      return next;
+    });
+  }
+
+  function renameSubcategory(id: string, currentLabel: string, categoryId = category) {
+    const target = categoryId && categoryId !== "all" ? categoryId : "";
+    if (!target || !id) return;
+    const label = window.prompt("Rename lane", currentLabel)?.trim();
+    if (!label || label === currentLabel) return;
+    if ((categoryLanes[target] ?? []).some((item) => item.id !== id && item.label.toLowerCase() === label.toLowerCase())) {
+      window.alert("A lane with that name already exists in this category.");
+      return;
+    }
+    setCategoryLanes((current) => {
+      const next = {
+        ...current,
+        [target]: (current[target] ?? []).map((item) => (item.id === id ? { ...item, label } : item)),
+      };
+      writeCategoryLanes(next);
+      return next;
+    });
+  }
+
   function addInspo(item: InboxInspo) {
     const next = [item, ...inspoInbox.filter((entry) => entry.id !== item.id && entry.url !== item.url)];
     setInspoInbox(next);
@@ -754,17 +794,29 @@ export function Catalog() {
     active,
     onSelect,
     onDelete,
+    onRename,
     kind = "cat",
   }: {
     item: { id: string; label: string };
     active: boolean;
     onSelect: () => void;
     onDelete?: () => void;
+    onRename?: () => void;
     kind?: "cat" | "chip";
   }) {
     return (
       <div className={`chip-wrap ${active ? "on" : ""}`}>
-        <button type="button" className={`${kind}${active ? " on" : ""}`} onClick={onSelect}>
+        <button
+          type="button"
+          className={`${kind}${active ? " on" : ""}`}
+          onClick={onSelect}
+          onDoubleClick={(event) => {
+            if (!admin || !onRename) return;
+            event.preventDefault();
+            onRename();
+          }}
+          title={admin && onRename ? "Double-click to rename" : undefined}
+        >
           {item.label}
         </button>
         {admin && onDelete && item.id !== "all" ? (
@@ -899,6 +951,7 @@ export function Catalog() {
                   setSubcategory("all");
                 }}
                 onDelete={item.id === "all" ? undefined : () => deleteCategory(item.id)}
+                onRename={item.id === "all" ? undefined : () => renameCategory(item.id, item.label)}
               />
             ))}
             {admin ? (
@@ -944,6 +997,7 @@ export function Catalog() {
                   active={subcategory === item.id}
                   onSelect={() => setSubcategory(item.id)}
                   onDelete={() => deleteSubcategory(item.id)}
+                  onRename={() => renameSubcategory(item.id, item.label)}
                   kind="chip"
                 />
               ))}
@@ -1007,6 +1061,7 @@ export function Catalog() {
                   setSubcategory("all");
                 }}
                 onDelete={item.id === "all" ? undefined : () => deleteCategory(item.id)}
+                onRename={item.id === "all" ? undefined : () => renameCategory(item.id, item.label)}
               />
             ))}
             {admin ? (
@@ -1052,6 +1107,7 @@ export function Catalog() {
                   active={subcategory === item.id}
                   onSelect={() => setSubcategory(item.id)}
                   onDelete={() => deleteSubcategory(item.id)}
+                  onRename={() => renameSubcategory(item.id, item.label)}
                   kind="chip"
                 />
               ))}
@@ -1115,6 +1171,7 @@ export function Catalog() {
                   setSubcategory("all");
                 }}
                 onDelete={item.id === "all" ? undefined : () => deleteCategory(item.id)}
+                onRename={item.id === "all" ? undefined : () => renameCategory(item.id, item.label)}
               />
             ))}
             {admin ? (
@@ -1161,6 +1218,7 @@ export function Catalog() {
                   active={subcategory === item.id}
                   onSelect={() => setSubcategory(item.id)}
                   onDelete={() => deleteSubcategory(item.id)}
+                  onRename={() => renameSubcategory(item.id, item.label)}
                   kind="chip"
                 />
               ))}
