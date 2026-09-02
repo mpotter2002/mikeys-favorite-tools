@@ -8,8 +8,10 @@ import { ChipPicks } from "@/components/ChipPicks";
 import {
   applyLookup,
   draftToId,
+  extractCommandFromText,
   extractDroppedUrl,
   extractUrlFromText,
+  guessFromCommand,
   guessFromUrl,
   type ToolDraft,
 } from "@/lib/guess";
@@ -36,6 +38,10 @@ const emptyDraft: ToolDraft = {
   source: "other",
   guessed: [],
 };
+
+function pluginLaneId(categoryLanes: Record<string, Option[]>) {
+  return (categoryLanes.agent ?? []).find((item) => item.id === "plugins" || item.label.toLowerCase() === "plugins")?.id ?? "plugins";
+}
 
 export function AddToolForm({ onAdd, categories = CATEGORIES, kinds = KINDS, statuses = STATUSES, categoryLanes = {}, defaultSource, defaultLanes, defaultCategory }: Props) {
   const [open, setOpen] = useState(false);
@@ -75,7 +81,24 @@ export function AddToolForm({ onAdd, categories = CATEGORIES, kinds = KINDS, sta
     setPickedSubcategories([]);
   }
 
+  function applyCommand(command: string) {
+    const guessed = guessFromCommand(command);
+    const plugin = pluginLaneId(categoryLanes);
+    setDraft(guessed);
+    setPickedCategories(["agent"]);
+    setPickedSubcategories([plugin]);
+    setSubcategory(plugin);
+    setOpen(true);
+    setError("");
+    setLooking(false);
+  }
+
   async function fillFromUrl(rawUrl: string) {
+    const command = extractCommandFromText(rawUrl);
+    if (command && !extractUrlFromText(rawUrl)) {
+      applyCommand(command);
+      return;
+    }
     const guessed = guessFromUrl(rawUrl);
     setDraft(guessed);
     setOpen(true);
@@ -96,9 +119,15 @@ export function AddToolForm({ onAdd, categories = CATEGORIES, kinds = KINDS, sta
   function onDrop(event: DragEvent<HTMLDivElement>) {
     event.preventDefault();
     setDragging(false);
+    const text = event.dataTransfer.getData("text/plain") || event.dataTransfer.getData("text/uri-list");
+    const command = extractCommandFromText(text);
+    if (command) {
+      applyCommand(command);
+      return;
+    }
     const url = extractDroppedUrl(event.dataTransfer);
     if (!url) {
-      setError("Could not find a link in that drop.");
+      setError("Could not find a link or command in that drop.");
       setOpen(true);
       return;
     }
@@ -106,6 +135,11 @@ export function AddToolForm({ onAdd, categories = CATEGORIES, kinds = KINDS, sta
   }
 
   function onPasteUrl(value: string) {
+    const command = extractCommandFromText(value);
+    if (command && !extractUrlFromText(value)) {
+      applyCommand(command);
+      return;
+    }
     const url = extractUrlFromText(value);
     if (url) void fillFromUrl(url);
   }
@@ -126,7 +160,7 @@ export function AddToolForm({ onAdd, categories = CATEGORIES, kinds = KINDS, sta
       id: draftToId(draft) || crypto.randomUUID(),
       name: draft.name.trim(),
       url: draft.url.trim(),
-      description: draft.description.trim() || "Saved from a dropped link.",
+      description: draft.description.trim() || (draft.command ? `Install with ${draft.command}` : "Saved from a dropped link."),
       category: pickedCategories[0] ?? draft.category,
       categories: pickedCategories,
       tags,
@@ -134,6 +168,7 @@ export function AddToolForm({ onAdd, categories = CATEGORIES, kinds = KINDS, sta
       status: draft.status,
       source,
       repo: draft.repo,
+      command: draft.command,
       lanes,
       subcategory: pickedSubcategories[0] || subcategory || undefined,
       subcategories: pickedSubcategories.length ? pickedSubcategories : undefined,
@@ -162,11 +197,11 @@ export function AddToolForm({ onAdd, categories = CATEGORIES, kinds = KINDS, sta
         <span>
           {defaultSource === "mine"
             ? "Drag a repo or site you made. I will fill in what I can and mark it as Built by Mikey."
-            : "Drag a bookmark, GitHub repo, or URL here. I will fill in what I can."}
+            : "Drag a bookmark, GitHub repo, URL, or paste an npx / install command. I will fill in what I can."}
         </span>
         <input
           className="drop-paste"
-          placeholder="or paste a URL / owner/repo"
+          placeholder="or paste a URL, owner/repo, or npx command"
           onPaste={(event) => onPasteUrl(event.clipboardData.getData("text/plain"))}
           onKeyDown={(event) => {
             if (event.key === "Enter") {
@@ -194,11 +229,19 @@ export function AddToolForm({ onAdd, categories = CATEGORIES, kinds = KINDS, sta
               />
             </label>
             <label className={draft.guessed.includes("url") ? "guessed" : undefined}>
-              URL or GitHub repo
+              {draft.command ? "Command" : "URL or GitHub repo"}
               <input
-                value={draft.url}
-                onChange={(e) => update("url", e.target.value)}
-                placeholder="https://github.com/vercel/ai"
+                value={draft.command || draft.url}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  if (extractCommandFromText(value) && !extractUrlFromText(value)) {
+                    setDraft((current) => ({ ...guessFromCommand(value), guessed: current.guessed }));
+                    return;
+                  }
+                  update("url", value);
+                  update("command", undefined as never);
+                }}
+                placeholder={draft.command ? "npx some-agent-plugin" : "https://github.com/vercel/ai"}
                 required
               />
             </label>

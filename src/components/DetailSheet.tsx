@@ -3,7 +3,8 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import type { Category, Inspo, InspoKind, Lane, Option, Skill, SkillFormat, Tool, ToolKind, ToolStatus } from "@/lib/types";
 import { CATEGORIES, KINDS, SKILL_FORMATS, STATUSES } from "@/lib/types";
-import { faviconUrl, hostname, parseGithubRepo, skillFormatLabel } from "@/lib/search";
+import { extractCommandFromText } from "@/lib/guess";
+import { faviconUrl, hostname, isCommandValue, parseGithubRepo, skillFormatLabel } from "@/lib/search";
 import { LanePicks } from "@/components/LanePicks";
 import { ChipPicks } from "@/components/ChipPicks";
 import { categoriesOf, subcategoriesOf } from "@/lib/search";
@@ -29,6 +30,7 @@ type Props = {
   onAddLane?: (label: string, categoryId: string) => string | null | undefined;
   onDeleteCategory?: (id: string) => boolean | void;
   onDeleteLane?: (id: string, categoryId?: string, skipConfirm?: boolean) => boolean | void;
+  onDeleteItem?: () => void;
   onAddStatus?: (label: string) => string | null | undefined;
 };
 
@@ -51,6 +53,7 @@ export function DetailSheet({
   onAddLane,
   onDeleteCategory,
   onDeleteLane,
+  onDeleteItem,
   onAddStatus,
 }: Props) {
   const item = selection?.item;
@@ -61,10 +64,12 @@ export function DetailSheet({
   const [failed, setFailed] = useState(false);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(item);
+  const [copiedCommand, setCopiedCommand] = useState(false);
 
   useEffect(() => {
     setEditing(false);
     setDraft(item);
+    setCopiedCommand(false);
   }, [item]);
 
   useEffect(() => {
@@ -90,6 +95,12 @@ export function DetailSheet({
 
   useEffect(() => {
     if (!url) return;
+    if (isCommandValue(url) || (selection?.type === "tool" && selection.item.command)) {
+      setImage("");
+      setRemoteDescription("");
+      setFailed(true);
+      return;
+    }
     let cancelled = false;
     setImage(repo ? `https://opengraph.githubassets.com/1/${repo.full}` : "");
     setRemoteDescription("");
@@ -224,8 +235,8 @@ export function DetailSheet({
           ) : (
             <div className="sheet-fallback">
               <img src={faviconUrl(url, repo)} alt="" width={42} height={42} />
-              <strong>{hostname(url)}</strong>
-              <span>No preview image for this link yet.</span>
+              <strong>{selection.type === "tool" && selection.item.command ? "CLI plugin" : hostname(url)}</strong>
+              <span>{selection.type === "tool" && (selection.item.command || isCommandValue(url)) ? "Paste the command to copy it." : "No preview image for this link yet."}</span>
             </div>
           )}
         </div>
@@ -238,8 +249,24 @@ export function DetailSheet({
                 <input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} required />
               </label>
               <label>
-                URL
-                <input value={draft.url} onChange={(e) => setDraft({ ...draft, url: e.target.value })} required />
+                {(draft as Tool).command || isCommandValue(draft.url) ? "Command" : "URL"}
+                <input
+                  value={(draft as Tool).command || draft.url}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    const command = extractCommandFromText(value);
+                    if (command && !value.startsWith("http")) {
+                      setDraft({
+                        ...draft,
+                        url: command,
+                        command,
+                      });
+                      return;
+                    }
+                    setDraft({ ...draft, url: value, command: undefined });
+                  }}
+                  required
+                />
               </label>
               <label>
                 Description
@@ -379,6 +406,11 @@ export function DetailSheet({
                 <button type="button" className="ghost" onClick={() => setEditing(false)}>
                   Cancel
                 </button>
+                {onDeleteItem ? (
+                  <button type="button" className="danger" onClick={onDeleteItem}>
+                    Delete
+                  </button>
+                ) : null}
               </div>
             </form>
           ) : (
@@ -388,8 +420,8 @@ export function DetailSheet({
               <p className="sheet-desc">{description}</p>
               <dl className="sheet-meta">
                 <div>
-                  <dt>Link</dt>
-                  <dd>{repo ? repo.full : hostname(url)}</dd>
+                  <dt>{selection.type === "tool" && (selection.item.command || isCommandValue(url)) ? "Command" : "Link"}</dt>
+                  <dd>{selection.type === "tool" && selection.item.command ? selection.item.command : repo ? repo.full : hostname(url)}</dd>
                 </div>
                 <div>
                   <dt>{selection.type === "inspo" ? "Type" : selection.type === "skill" ? "Format" : "Category"}</dt>
@@ -446,9 +478,23 @@ export function DetailSheet({
                 ).join(" · ")}
               </p>
               <div className="sheet-actions">
-                <a href={url} target="_blank" rel="noreferrer">
-                  Open site
-                </a>
+                {selection.type === "tool" && (selection.item.command || isCommandValue(url)) ? (
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      const command = selection.item.command || url;
+                      await navigator.clipboard.writeText(command);
+                      setCopiedCommand(true);
+                      window.setTimeout(() => setCopiedCommand(false), 1400);
+                    }}
+                  >
+                    {copiedCommand ? "Copied command" : "Copy command"}
+                  </button>
+                ) : (
+                  <a href={url} target="_blank" rel="noreferrer">
+                    Open site
+                  </a>
+                )}
                 {admin ? (
                   <button type="button" className="ghost" onClick={() => setEditing(true)}>
                     Edit card

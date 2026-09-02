@@ -16,7 +16,14 @@ export type Filters = {
   subcategory?: string;
 };
 
+export function isCommandValue(value: string | undefined) {
+  if (!value) return false;
+  const trimmed = value.trim();
+  return /^(npx|pnpm|yarn|bunx|npm|uvx|pipx|pip)\b/i.test(trimmed);
+}
+
 export function hostname(url: string) {
+  if (isCommandValue(url)) return url;
   try {
     return new URL(url).hostname.replace(/^www\./, "");
   } catch {
@@ -81,6 +88,7 @@ export function isGithubTool(tool: Pick<Tool, "url" | "source" | "repo" | "categ
 
 export function faviconUrl(url: string, repo?: GithubRepo | null) {
   if (repo) return `https://github.com/${repo.owner}.png?size=128`;
+  if (isCommandValue(url)) return `https://www.google.com/s2/favicons?domain=npmjs.com&sz=128`;
   return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(hostname(url))}&sz=128`;
 }
 
@@ -90,6 +98,7 @@ function haystack(tool: Tool) {
     tool.name,
     tool.description,
     tool.url,
+    tool.command ?? "",
     tool.category,
     ...(tool.categories ?? []),
     tool.notes ?? "",

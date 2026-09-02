@@ -11,6 +11,7 @@ const SKILL_KEY = "toolfolio.skills.v1";
 const SKILL_EDITS_KEY = "toolfolio.skill-edits.v1";
 const CATEGORY_LANES_KEY = "toolfolio.category-lanes.v1";
 const HIDDEN_CATEGORIES_KEY = "toolfolio.hidden-categories.v1";
+const HIDDEN_ITEMS_KEY = "toolfolio.hidden-items.v1";
 
 function readJson<T>(key: string, fallback: T): T {
   if (typeof window === "undefined") return fallback;
@@ -130,4 +131,13 @@ export function readHiddenCategories(): string[] {
 
 export function writeHiddenCategories(ids: string[]) {
   window.localStorage.setItem(HIDDEN_CATEGORIES_KEY, JSON.stringify(ids));
+}
+
+export function readHiddenItems(): string[] {
+  const parsed = readJson<string[]>(HIDDEN_ITEMS_KEY, []);
+  return Array.isArray(parsed) ? parsed.filter((id) => typeof id === "string" && id) : [];
+}
+
+export function writeHiddenItems(ids: string[]) {
+  window.localStorage.setItem(HIDDEN_ITEMS_KEY, JSON.stringify(ids));
 }

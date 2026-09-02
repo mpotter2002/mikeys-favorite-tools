@@ -19,6 +19,7 @@ export type Tool = {
   notes?: string;
   source?: ToolSource;
   repo?: string;
+  command?: string;
   lanes?: Lane[];
   subcategory?: string;
   subcategories?: string[];

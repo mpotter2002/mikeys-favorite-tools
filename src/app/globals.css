@@ -347,13 +347,27 @@ h1 {
 
 .add-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   margin-top: 12px;
+  align-items: center;
 }
 
 .add-actions button[type="submit"] {
   background: var(--ink);
   color: var(--paper);
+}
+
+.add-actions .danger {
+  margin-left: auto;
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
+}
+
+.add-actions .danger:hover {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent);
+  border-color: var(--accent);
 }
 
 .hint {
@@ -948,4 +962,12 @@ a.ghost,
   font-size: 13px;
   text-align: center;
   outline: none;
+}
+
+.card .host {
+  font-family: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.sheet-meta dd {
+  overflow-wrap: anywhere;
 }

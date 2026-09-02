@@ -1,5 +1,5 @@
 import type { Tool } from "@/lib/types";
-import { faviconUrl, hostname, isMineTool, parseGithubRepo } from "@/lib/search";
+import { faviconUrl, hostname, isCommandValue, isMineTool, parseGithubRepo } from "@/lib/search";
 
 function pretty(value: string) {
   return value
@@ -11,7 +11,8 @@ function pretty(value: string) {
 
 export function ToolCard({ tool, onOpen }: { tool: Tool; onOpen: (tool: Tool) => void }) {
   const repo = parseGithubRepo(tool.url) ?? (tool.repo ? parseGithubRepo(`https://github.com/${tool.repo}`) : null);
-  const hostLabel = repo ? repo.full : hostname(tool.url);
+  const command = tool.command || (isCommandValue(tool.url) ? tool.url : "");
+  const hostLabel = command || (repo ? repo.full : hostname(tool.url));
   const mine = isMineTool(tool);
 
   return (
@@ -30,7 +31,8 @@ export function ToolCard({ tool, onOpen }: { tool: Tool; onOpen: (tool: Tool) =>
         />
         <div className="badges">
           {mine ? <span className="pill github-pill">Built by Mikey</span> : null}
-          {repo && !mine ? <span className="pill github-pill">GitHub</span> : null}
+          {command ? <span className="pill github-pill">Plugin</span> : null}
+          {repo && !mine && !command ? <span className="pill github-pill">GitHub</span> : null}
           <span className={`pill status-${tool.status}`}>{pretty(tool.status)}</span>
         </div>
       </div>

@@ -33,6 +33,7 @@ import {
   readExtraKinds,
   readExtraStatuses,
   readHiddenCategories,
+  readHiddenItems,
   readInbox,
   readInspoEdits,
   readInspoInbox,
@@ -44,6 +45,7 @@ import {
   writeExtraKinds,
   writeExtraStatuses,
   writeHiddenCategories,
+  writeHiddenItems,
   writeInbox,
   writeInspoEdits,
   writeInspoInbox,
@@ -84,6 +86,7 @@ export function Catalog() {
   const [extraKinds, setExtraKinds] = useState<Option[]>([]);
   const [categoryLanes, setCategoryLanes] = useState<Record<string, Option[]>>({});
   const [hiddenCategories, setHiddenCategories] = useState<string[]>([]);
+  const [hiddenItems, setHiddenItems] = useState<string[]>([]);
   const [newCategory, setNewCategory] = useState("");
   const [newCategoryDescription, setNewCategoryDescription] = useState("");
   const [newStatus, setNewStatus] = useState("");
@@ -102,6 +105,7 @@ export function Catalog() {
     setExtraKinds(readExtraKinds());
     setCategoryLanes(readCategoryLanes());
     setHiddenCategories(readHiddenCategories());
+    setHiddenItems(readHiddenItems());
     fetch("/api/admin/session")
       .then((response) => response.json())
       .then((data: { admin?: boolean }) => setAdmin(Boolean(data.admin)))
@@ -109,16 +113,16 @@ export function Catalog() {
   }, []);
 
   const toolsRaw = useMemo(
-    () => applyEdits(mergeCatalog(catalog, inbox), toolEdits),
-    [inbox, toolEdits],
+    () => applyEdits(mergeCatalog(catalog, inbox), toolEdits).filter((item) => !hiddenItems.includes(item.id)),
+    [inbox, toolEdits, hiddenItems],
   );
   const inspoRaw = useMemo(
-    () => applyEdits(mergeInspo(inspoCatalog, inspoInbox), inspoEdits),
-    [inspoInbox, inspoEdits],
+    () => applyEdits(mergeInspo(inspoCatalog, inspoInbox), inspoEdits).filter((item) => !hiddenItems.includes(item.id)),
+    [inspoInbox, inspoEdits, hiddenItems],
   );
   const skillsRaw = useMemo(
-    () => applyEdits(mergeSkills(skillsCatalog, skillInbox), skillEdits),
-    [skillInbox, skillEdits],
+    () => applyEdits(mergeSkills(skillsCatalog, skillInbox), skillEdits).filter((item) => !hiddenItems.includes(item.id)),
+    [skillInbox, skillEdits, hiddenItems],
   );
   const tools = useMemo(() => {
     const fromSkills = skillsRaw.filter((item) => lanesOfSkill(item).includes("tools")).map(skillToTool);
@@ -136,6 +140,24 @@ export function Catalog() {
     return mergeByUrl(skillsRaw, mergeByUrl(fromTools, fromInspo));
   }, [skillsRaw, toolsRaw, inspoRaw]);
   const githubCount = useMemo(() => tools.filter((tool) => isGithubTool(tool) && !isMineTool(tool)).length, [tools]);
+
+  function hideItem(id: string) {
+    setHiddenItems((current) => {
+      if (current.includes(id)) return current;
+      const next = [...current, id];
+      writeHiddenItems(next);
+      return next;
+    });
+  }
+
+  function unhideItem(id: string) {
+    setHiddenItems((current) => {
+      if (!current.includes(id)) return current;
+      const next = current.filter((item) => item !== id);
+      writeHiddenItems(next);
+      return next;
+    });
+  }
   const mineTools = useMemo(
     () =>
       mergeByUrl(
@@ -210,9 +232,27 @@ export function Catalog() {
   }, [category, categoryLanes]);
 
   function addTool(tool: InboxTool) {
-    const next = [tool, ...inbox.filter((item) => item.id !== tool.id && item.url !== tool.url)];
+    const commandLike = Boolean(tool.command) || /\b(npx|pnpm|yarn|bunx|npm|uvx|pipx)\b/i.test(tool.url);
+    const nextTool = commandLike
+      ? {
+          ...tool,
+          command: tool.command || tool.url,
+          category: tool.category || "agent",
+          categories: Array.from(new Set([...(tool.categories ?? [tool.category].filter(Boolean)), "agent"])),
+          tags: Array.from(new Set([...tool.tags, "plugin", "agent"])),
+          kind: tool.kind || "agent",
+          subcategory: tool.subcategory || "plugins",
+          subcategories: Array.from(new Set([...(tool.subcategories ?? []), "plugins"])),
+        }
+      : tool;
+    if (commandLike) {
+      addCategory("Agent", "Agent tools, frameworks, and plugins.", false);
+      addSubcategory("Plugins", "agent", false);
+    }
+    const next = [nextTool, ...inbox.filter((item) => item.id !== nextTool.id && item.url !== nextTool.url)];
     setInbox(next);
     writeInbox(next);
+    unhideItem(nextTool.id);
   }
 
   function addOption(label: string, extras: Option[], builtins: Option[]) {
@@ -399,12 +439,14 @@ export function Catalog() {
     const next = [item, ...inspoInbox.filter((entry) => entry.id !== item.id && entry.url !== item.url)];
     setInspoInbox(next);
     writeInspoInbox(next);
+    unhideItem(item.id);
   }
 
   function addSkill(item: InboxSkill) {
     const next = [item, ...skillInbox.filter((entry) => entry.id !== item.id && entry.url !== item.url)];
     setSkillInbox(next);
     writeSkillInbox(next);
+    unhideItem(item.id);
   }
 
   function saveTool(tool: Tool) {
@@ -441,6 +483,55 @@ export function Catalog() {
       return updated;
     });
     setSelected({ type: "skill", item });
+  }
+
+  function dropEdit<T extends { id: string }>(edits: Record<string, T>, id: string) {
+    if (!(id in edits)) return edits;
+    const next = { ...edits };
+    delete next[id];
+    return next;
+  }
+
+  function deleteSelected() {
+    if (!selected) return;
+    const id = selected.item.id;
+    const name = selected.item.name || "this card";
+    if (!window.confirm(`Delete ${name}? This hides it from the site.`)) return;
+
+    setInbox((current) => {
+      const next = current.filter((item) => item.id !== id);
+      writeInbox(next);
+      return next;
+    });
+    setInspoInbox((current) => {
+      const next = current.filter((item) => item.id !== id);
+      writeInspoInbox(next);
+      return next;
+    });
+    setSkillInbox((current) => {
+      const next = current.filter((item) => item.id !== id);
+      writeSkillInbox(next);
+      return next;
+    });
+
+    setToolEdits((current) => {
+      const next = dropEdit(current, id);
+      writeToolEdits(next);
+      return next;
+    });
+    setInspoEdits((current) => {
+      const next = dropEdit(current, id);
+      writeInspoEdits(next);
+      return next;
+    });
+    setSkillEdits((current) => {
+      const next = dropEdit(current, id);
+      writeSkillEdits(next);
+      return next;
+    });
+
+    hideItem(id);
+    setSelected(null);
   }
 
   async function logout() {
@@ -1052,6 +1143,7 @@ export function Catalog() {
         onAddLane={(label, categoryId) => addSubcategory(label, categoryId, false)}
         onDeleteCategory={deleteCategory}
         onDeleteLane={deleteSubcategory}
+        onDeleteItem={deleteSelected}
         onAddStatus={(label) => addStatus(label, false)}
       />
     </div>

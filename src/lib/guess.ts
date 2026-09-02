@@ -11,6 +11,7 @@ export type ToolDraft = {
   tags: string[];
   source: ToolSource;
   repo?: string;
+  command?: string;
   guessed: string[];
 };
 
@@ -125,6 +126,51 @@ export function extractUrlFromText(text: string) {
   const match = trimmed.match(/https?:\/\/[^\s<>"']+/i) ?? trimmed.match(/\b(?:www\.)?[a-z0-9.-]+\.[a-z]{2,}(?:\/[^\s<>"']*)?/i);
   if (!match) return null;
   return normalizeUrl(match[0]);
+}
+
+const COMMAND_RE = /(?:^|[`$]|\b)((?:npx|pnpm\s+dlx|yarn\s+dlx|bunx|npm\s+(?:i|install|exec)|pnpm\s+(?:add|dlx)|yarn\s+add|bun\s+(?:add|x)|uvx|pipx|pip\s+install)\s+[^\n;`]+)/i;
+
+export function looksLikeCommand(value: string) {
+  const trimmed = value.trim().replace(/^[`$]+\s*/, "");
+  return Boolean(COMMAND_RE.test(trimmed) || /^(npx|pnpm|yarn|bunx|npm|uvx|pipx|pip)\b/i.test(trimmed));
+}
+
+export function extractCommandFromText(text: string) {
+  const trimmed = text.trim();
+  if (!trimmed) return null;
+  const match = trimmed.match(COMMAND_RE);
+  if (match?.[1]) return match[1].trim().replace(/[`]+$/g, "");
+  if (looksLikeCommand(trimmed) && !looksLikeUrl(trimmed)) {
+    return trimmed.replace(/^[`$]+\s*/, "").replace(/[`]+$/g, "");
+  }
+  return null;
+}
+
+function packageFromCommand(command: string) {
+  const parts = command.trim().split(/\s+/);
+  const skip = new Set(["npx", "pnpm", "yarn", "bunx", "npm", "uvx", "pipx", "pip", "dlx", "exec", "add", "install", "i", "x", "-y", "--yes"]);
+  for (const part of parts) {
+    if (!part || part.startsWith("-") || skip.has(part.toLowerCase())) continue;
+    return part.replace(/^@/, "").split("/")[0] || part;
+  }
+  return command;
+}
+
+export function guessFromCommand(command: string): ToolDraft {
+  const pkg = packageFromCommand(command);
+  const name = pkg.replace(/[-_]+/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+  return {
+    name,
+    url: command,
+    description: `Install with ${command}`,
+    category: "agent",
+    kind: "agent",
+    status: "watching",
+    tags: ["plugin", "agent", "cli"],
+    source: "other",
+    command,
+    guessed: ["name", "url", "description", "category", "kind", "tags", "command"],
+  };
 }
 
 function hostOf(url: string) {
