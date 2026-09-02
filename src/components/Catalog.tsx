@@ -8,7 +8,6 @@ import {
   CATEGORIES,
   INSPO_KINDS,
   KINDS,
-  SKILL_FORMATS,
   STATUSES,
   type Category,
   type InboxInspo,
@@ -19,13 +18,12 @@ import {
   type Lane,
   type Option,
   type Skill,
-  type SkillFormat,
   type Tool,
   type ToolKind,
   type ToolStatus,
 } from "@/lib/types";
-import { categoriesOf, filterInspo, filterSkills, filterTools, isGithubTool, isMineTool, mergeCatalog, mergeInspo, mergeSkills, slugify } from "@/lib/search";
-import { inspoToSkill, inspoToTool, lanesOfInspo, lanesOfSkill, lanesOfTool, mergeByUrl, skillToInspo, skillToTool, toolToInspo, toolToSkill } from "@/lib/lanes";
+import { categoriesOf, filterInspo, filterTools, isGithubTool, isMineTool, mergeCatalog, mergeInspo, mergeSkills, slugify } from "@/lib/search";
+import { inspoToSkill, inspoToTool, lanesOfInspo, lanesOfSkill, lanesOfTool, mergeByUrl, skillToInspo, skillToTool, toolToInspo } from "@/lib/lanes";
 import {
   applyEdits,
   readExtraCategories,
@@ -55,12 +53,12 @@ import {
 } from "@/lib/storage";
 import { AddToolForm } from "@/components/AddToolForm";
 import { AddInspoForm } from "@/components/AddInspoForm";
-import { AddSkillForm } from "@/components/AddSkillForm";
 import { ToolCard } from "@/components/ToolCard";
 import { InspoCard } from "@/components/InspoCard";
-import { SkillCard } from "@/components/SkillCard";
 import { DetailSheet } from "@/components/DetailSheet";
 import { ThemeToggle } from "@/components/ThemeToggle";
+
+type BrowseLane = Lane | "all";
 
 function repairInboxIds(items: InboxTool[]) {
   const knownIds = new Map(catalog.map((item) => [item.id, item.url]));
@@ -90,7 +88,7 @@ function repairInboxIds(items: InboxTool[]) {
 }
 
 export function Catalog() {
-  const [lane, setLane] = useState<Lane>("tools");
+  const [lane, setLane] = useState<BrowseLane>("tools");
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("");
   const [kind, setKind] = useState<ToolKind | "all">("all");
@@ -98,7 +96,6 @@ export function Catalog() {
   const [status, setStatus] = useState<ToolStatus | "all">("all");
   const [githubOnly, setGithubOnly] = useState(false);
   const [inspoKind, setInspoKind] = useState<InspoKind | "all" | "">("");
-  const [skillFormat, setSkillFormat] = useState<SkillFormat | "all" | "">("");
   const [inbox, setInbox] = useState<InboxTool[]>([]);
   const [inspoInbox, setInspoInbox] = useState<InboxInspo[]>([]);
   const [skillInbox, setSkillInbox] = useState<InboxSkill[]>([]);
@@ -164,11 +161,18 @@ export function Catalog() {
     const fromSkills = skillsRaw.filter((item) => lanesOfSkill(item).includes("inspo")).map(skillToInspo);
     return mergeByUrl(inspoRaw, mergeByUrl(fromTools, fromSkills));
   }, [inspoRaw, toolsRaw, skillsRaw]);
-  const skillItems = useMemo(() => {
-    const fromTools = toolsRaw.filter((item) => lanesOfTool(item).includes("skills")).map(toolToSkill);
-    const fromInspo = inspoRaw.filter((item) => lanesOfInspo(item).includes("skills")).map(inspoToSkill);
-    return mergeByUrl(skillsRaw, mergeByUrl(fromTools, fromInspo));
-  }, [skillsRaw, toolsRaw, inspoRaw]);
+  const agentTools = useMemo(() => {
+    const fromSkills = skillsRaw.filter((item) => lanesOfSkill(item).includes("skills")).map(skillToTool);
+    const fromInspo = inspoRaw.filter((item) => lanesOfInspo(item).includes("skills")).map(inspoToTool);
+    return mergeByUrl(
+      toolsRaw.filter((item) => lanesOfTool(item).includes("skills")),
+      mergeByUrl(fromSkills, fromInspo),
+    );
+  }, [toolsRaw, skillsRaw, inspoRaw]);
+  const allTools = useMemo(
+    () => mergeByUrl(toolsRaw, mergeByUrl(skillsRaw.map(skillToTool), inspoRaw.map(inspoToTool))),
+    [toolsRaw, skillsRaw, inspoRaw],
+  );
   const githubCount = useMemo(() => tools.filter((tool) => isGithubTool(tool) && !isMineTool(tool)).length, [tools]);
 
   function hideItem(id: string) {
@@ -217,7 +221,6 @@ export function Catalog() {
   const searching = query.trim().length > 0;
   const toolsReady = searching || category !== "";
   const inspoReady = searching || inspoKind !== "";
-  const skillsReady = searching || skillFormat !== "";
   const visibleTools = useMemo(
     () =>
       toolsReady
@@ -237,11 +240,34 @@ export function Catalog() {
     () => (inspoReady ? filterInspo(inspoItems, query, inspoKind || "all") : []),
     [inspoItems, query, inspoKind, inspoReady],
   );
-  const visibleSkills = useMemo(
-    () => (skillsReady ? filterSkills(skillItems, query, skillFormat || "all") : []),
-    [skillItems, query, skillFormat, skillsReady],
+  const visibleAgents = useMemo(
+    () =>
+      toolsReady
+        ? filterTools(agentTools, {
+            query,
+            category: category || "all",
+            kind,
+            status,
+            githubOnly,
+            subcategory,
+          })
+        : [],
+    [agentTools, query, category, kind, status, githubOnly, toolsReady, subcategory],
   );
-  const selectedSkillFormat = SKILL_FORMATS.find((item) => item.id === skillFormat);
+  const visibleAll = useMemo(
+    () =>
+      toolsReady
+        ? filterTools(allTools, {
+            query,
+            category: category || "all",
+            kind,
+            status,
+            githubOnly,
+            subcategory,
+          })
+        : [],
+    [allTools, query, category, kind, status, githubOnly, toolsReady, subcategory],
+  );
   const categories = useMemo(() => {
     const seen = new Set(CATEGORIES.map((item) => item.id));
     const extras = extraCategories.filter((item) => item.id !== "all" && !seen.has(item.id));
@@ -311,7 +337,6 @@ export function Catalog() {
       setStatus("all");
       setGithubOnly(false);
       setInspoKind("");
-      setSkillFormat("");
       return;
     }
 
@@ -334,7 +359,7 @@ export function Catalog() {
     unhideItem(nextTool.id);
 
     const savedLanes = lanesOfTool(nextTool);
-    const targetLane = savedLanes.includes(lane) ? lane : savedLanes[0] ?? "tools";
+    const targetLane = lane !== "all" && savedLanes.includes(lane) ? lane : savedLanes[0] ?? "tools";
     const targetCategory = categoriesOf(nextTool)[0] ?? "";
 
     setLane(targetLane);
@@ -345,7 +370,6 @@ export function Catalog() {
     setStatus("all");
     setGithubOnly(false);
     setInspoKind("");
-    setSkillFormat("");
   }
 
   function addOption(label: string, extras: Option[], builtins: Option[]) {
@@ -645,7 +669,17 @@ export function Catalog() {
   }
 
   async function copyInbox() {
-    const payload = JSON.stringify(lane === "inspo" ? inspoInbox : lane === "skills" ? skillInbox : inbox, null, 2);
+    const payload = JSON.stringify(
+      lane === "all"
+        ? { tools: inbox, inspo: inspoInbox, agents: skillInbox }
+        : lane === "inspo"
+          ? inspoInbox
+          : lane === "skills"
+            ? [...inbox.filter((item) => lanesOfTool(item).includes("skills")), ...skillInbox]
+            : inbox,
+      null,
+      2,
+    );
     await navigator.clipboard.writeText(payload);
     setCopied(true);
     window.setTimeout(() => setCopied(false), 1600);
@@ -679,20 +713,19 @@ export function Catalog() {
         : [],
     [stackTools, query, category, toolsReady, subcategory],
   );
-  const showing = lane === "inspo" ? visibleInspo : lane === "mine" ? visibleMine : lane === "stack" ? visibleStack : lane === "skills" ? visibleSkills : visibleTools;
-  const currentInbox = lane === "inspo" ? inspoInbox : lane === "skills" ? skillInbox : inbox;
-  const browseReady = lane === "inspo" ? inspoReady : lane === "skills" ? skillsReady : toolsReady;
+  const showing = lane === "all" ? visibleAll : lane === "inspo" ? visibleInspo : lane === "mine" ? visibleMine : lane === "stack" ? visibleStack : lane === "skills" ? visibleAgents : visibleTools;
+  const currentInbox = lane === "all" ? [...inbox, ...inspoInbox, ...skillInbox] : lane === "inspo" ? inspoInbox : lane === "skills" ? [...inbox.filter((item) => lanesOfTool(item).includes("skills")), ...skillInbox] : inbox;
+  const browseReady = lane === "inspo" ? inspoReady : toolsReady;
 
-  function chooseLane(next: Lane) {
+  function chooseLane(next: BrowseLane) {
     setLane(next);
     setQuery("");
-    setCategory("");
+    setCategory(next === "all" ? "all" : "");
     setKind("all");
     setSubcategory("all");
     setStatus("all");
     setGithubOnly(false);
     setInspoKind("");
-    setSkillFormat("");
   }
 
   function CategoryChip({
@@ -769,13 +802,20 @@ export function Catalog() {
             <span>built by me</span>
           </div>
           <div>
-            <strong>{skillItems.length}</strong>
+            <strong>{agentTools.length}</strong>
             <span>AI / agents</span>
           </div>
         </div>
       </header>
 
       <div className="lanes">
+        <button
+          type="button"
+          className={lane === "all" ? "lane on" : "lane"}
+          onClick={() => chooseLane("all")}
+        >
+          All
+        </button>
         <button
           type="button"
           className={lane === "tools" ? "lane on" : "lane"}
@@ -815,11 +855,11 @@ export function Catalog() {
 
       <div className="toolbar">
         <label className="search">
-          <span className="sr-only">{lane === "inspo" ? "Search inspo" : lane === "mine" ? "Search tools I made" : lane === "stack" ? "Search current stack" : lane === "skills" ? "Search AI and agent resources" : "Search tools and resources"}</span>
+          <span className="sr-only">{lane === "all" ? "Search everything" : lane === "inspo" ? "Search inspo" : lane === "mine" ? "Search tools I made" : lane === "stack" ? "Search current stack" : lane === "skills" ? "Search AI and agent resources" : "Search tools and resources"}</span>
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder={lane === "inspo" ? "Search sites, people, tags" : lane === "mine" ? "Search the tools I made" : lane === "stack" ? "Search what I am using now" : lane === "skills" ? "Search agents, skills, MCPs, frameworks" : "Search tools, repos, resources"}
+            placeholder={lane === "all" ? "Search all tools, agents, skills, sites" : lane === "inspo" ? "Search sites, people, tags" : lane === "mine" ? "Search the tools I made" : lane === "stack" ? "Search what I am using now" : lane === "skills" ? "Search agents, skills, MCPs, frameworks" : "Search tools, repos, resources"}
           />
         </label>
       </div>
@@ -1010,7 +1050,7 @@ export function Catalog() {
             <AddToolForm onAdd={addTool} categories={categories} kinds={kinds} statuses={statuses} categoryLanes={categoryLanes} defaultSource="mine" defaultLanes={["mine"]} defaultCategory={category || undefined} />
           ) : null}
         </>
-      ) : lane === "tools" ? (
+      ) : lane === "tools" || lane === "skills" || lane === "all" ? (
         <>
           <div className="cats">
             {categories.map((item) => (
@@ -1151,36 +1191,16 @@ export function Catalog() {
           ) : null}
 
           {admin ? (
-            <AddToolForm onAdd={addTool} categories={categories} kinds={kinds} statuses={statuses} categoryLanes={categoryLanes} defaultLanes={["tools"]} defaultCategory={category || undefined} />
+            <AddToolForm
+              onAdd={addTool}
+              categories={categories}
+              kinds={kinds}
+              statuses={statuses}
+              categoryLanes={categoryLanes}
+              defaultLanes={lane === "skills" ? ["skills"] : ["tools"]}
+              defaultCategory={category || undefined}
+            />
           ) : null}
-        </>
-      ) : lane === "skills" ? (
-        <>
-          <div className="cats">
-            {SKILL_FORMATS.map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                className={skillFormat === item.id ? "cat on" : "cat"}
-                onClick={() => setSkillFormat(item.id)}
-              >
-                {item.label}
-              </button>
-            ))}
-          </div>
-          {selectedSkillFormat?.description ? (
-            <p className="hint category-desc">{selectedSkillFormat.description}</p>
-          ) : (
-            <p className="hint category-desc">Agent resources can include skills, configs, MCP tools, and framework packs. Pick a format, or All.</p>
-          )}
-          {admin && currentInbox.length > 0 ? (
-            <div className="status-row">
-              <button type="button" className="ghost" onClick={copyInbox}>
-                {copied ? "Copied inbox JSON" : "Copy inbox JSON"}
-              </button>
-            </div>
-          ) : null}
-          {admin ? <AddSkillForm onAdd={addSkill} /> : null}
         </>
       ) : (
         <>
@@ -1213,20 +1233,24 @@ export function Catalog() {
         <div className="empty">
           {lane === "inspo"
             ? "Choose sites, people, or All inspo to start looking."
-            : lane === "skills"
-              ? "Choose a format, or All, to start looking through AI and agent resources."
+            : lane === "all"
+              ? "Choose a category, or use All to browse everything."
+              : lane === "skills"
+              ? "Choose a category to start looking through AI and agent resources, or All for the whole section."
             : "Choose a category to start looking, or All if you want the whole lane."}
         </div>
       ) : showing.length === 0 ? (
         <div className="empty">
           {lane === "inspo"
             ? "Nothing matches. Drop a site or person into inspo."
-            : lane === "stack"
+            : lane === "all"
+              ? "Nothing matches across your list. Try another search or filter."
+              : lane === "stack"
               ? "Nothing in this stack view yet. Open a card and add it to Current stack, or drop a link here."
-            : lane === "mine"
-              ? "Nothing matches. Drop one of your repos here to add a tool you made."
-              : lane === "skills"
-                ? "Nothing matches. Drop a skill file, config, or agent resource here."
+              : lane === "mine"
+                ? "Nothing matches. Drop one of your repos here to add a tool you made."
+                : lane === "skills"
+                ? "Nothing matches. Drop an agent tool, framework, skill, or config here."
             : "Nothing matches. Drop the filter or paste a GitHub URL into Add a tool."}
         </div>
       ) : (
@@ -1236,10 +1260,10 @@ export function Catalog() {
                 <InspoCard key={item.id} item={item} onOpen={(entry) => setSelected({ type: "inspo", item: entry })} />
               ))
             : lane === "skills"
-              ? visibleSkills.map((item) => (
-                  <SkillCard key={item.id} item={item} onOpen={(entry) => setSelected({ type: "skill", item: entry })} />
+              ? visibleAgents.map((item) => (
+                  <ToolCard key={item.id} tool={item} onOpen={(entry) => setSelected({ type: "tool", item: entry })} />
                 ))
-            : (lane === "mine" ? visibleMine : lane === "stack" ? visibleStack : visibleTools).map((tool) => (
+            : (lane === "all" ? visibleAll : lane === "mine" ? visibleMine : lane === "stack" ? visibleStack : visibleTools).map((tool) => (
                 <ToolCard key={tool.id} tool={tool} onOpen={(entry) => setSelected({ type: "tool", item: entry })} />
               ))}
         </section>

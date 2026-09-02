@@ -299,6 +299,16 @@ export function DetailSheet({
                   onChange={(e) => setDraft({ ...draft, description: e.target.value })}
                 />
               </label>
+              <LanePicks
+                value={
+                  selection.type === "tool"
+                    ? lanesOfTool(draft as Tool)
+                    : selection.type === "skill"
+                      ? lanesOfSkill(draft as Skill)
+                      : lanesOfInspo(draft as Inspo)
+                }
+                onChange={(lanes) => setDraft({ ...draft, lanes })}
+              />
               {selection.type === "skill" ? (
                 <>
                   <label>
@@ -417,16 +427,6 @@ export function DetailSheet({
                   }
                 />
               </label>
-              <LanePicks
-                value={
-                  selection.type === "tool"
-                    ? lanesOfTool(draft as Tool)
-                    : selection.type === "skill"
-                      ? lanesOfSkill(draft as Skill)
-                      : lanesOfInspo(draft as Inspo)
-                }
-                onChange={(lanes) => setDraft({ ...draft, lanes })}
-              />
               <div className="add-actions">
                 <button type="submit">Save edits</button>
                 <button type="button" className="ghost" onClick={() => setEditing(false)}>
