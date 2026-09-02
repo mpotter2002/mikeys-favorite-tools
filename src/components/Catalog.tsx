@@ -22,7 +22,7 @@ import {
   type ToolKind,
   type ToolStatus,
 } from "@/lib/types";
-import { categoriesOf, filterInspo, filterTools, isGithubTool, isMineTool, mergeCatalog, mergeInspo, mergeSkills, slugify } from "@/lib/search";
+import { categoriesOf, filterInspo, filterTools, isGithubTool, isMineTool, mergeCatalog, mergeInspo, mergeSkills, slugify, subcategoriesOf } from "@/lib/search";
 import { inspoToSkill, inspoToTool, lanesOfInspo, lanesOfSkill, lanesOfTool, mergeByUrl, skillToInspo, skillToTool, toolToInspo } from "@/lib/lanes";
 import {
   applyEdits,
@@ -88,9 +88,9 @@ function repairInboxIds(items: InboxTool[]) {
 }
 
 export function Catalog() {
-  const [lane, setLane] = useState<BrowseLane>("tools");
+  const [lane, setLane] = useState<BrowseLane>("all");
   const [query, setQuery] = useState("");
-  const [category, setCategory] = useState("");
+  const [category, setCategory] = useState("all");
   const [kind, setKind] = useState<ToolKind | "all">("all");
   const [subcategory, setSubcategory] = useState("all");
   const [status, setStatus] = useState<ToolStatus | "all">("all");
@@ -282,11 +282,6 @@ export function Catalog() {
     return [...KINDS, ...extraKinds.filter((item) => item.id !== "all" && !seen.has(item.id))];
   }, [extraKinds]);
   const selectedCategory = categories.find((item) => item.id === category);
-  const currentCategoryLanes = useMemo(() => {
-    if (!category || category === "all") return [];
-    return categoryLanes[category] ?? [];
-  }, [category, categoryLanes]);
-
   function addTool(tool: InboxTool) {
     const commandLike = Boolean(tool.command) || /\b(npx|pnpm|yarn|bunx|npm|uvx|pipx)\b/i.test(tool.url);
     const preparedTool = commandLike
@@ -727,6 +722,17 @@ export function Catalog() {
     if (admin && category && category !== "all") ids.add(category);
     return categories.filter((item) => item.id === "all" || ids.has(item.id));
   }, [cardsOnCurrentPage, categories, category, admin]);
+  const pageCategoryLanes = useMemo(() => {
+    if (!category || category === "all") return [];
+    const laneIds = new Set(
+      cardsOnCurrentPage
+        .filter((item) => categoriesOf(item).includes(category))
+        .flatMap((item) => subcategoriesOf(item)),
+    );
+    // Keep an active lane available to an admin while they are creating its first card.
+    if (admin && subcategory !== "all") laneIds.add(subcategory);
+    return (categoryLanes[category] ?? []).filter((item) => laneIds.has(item.id));
+  }, [cardsOnCurrentPage, category, categoryLanes, subcategory, admin]);
   const showing = lane === "all" ? visibleAll : lane === "inspo" ? visibleInspo : lane === "mine" ? visibleMine : lane === "stack" ? visibleStack : lane === "skills" ? visibleAgents : visibleTools;
   const currentInbox = lane === "all" ? [...inbox, ...inspoInbox, ...skillInbox] : lane === "inspo" ? inspoInbox : lane === "skills" ? [...inbox.filter((item) => lanesOfTool(item).includes("skills")), ...skillInbox] : inbox;
   const browseReady = lane === "inspo" ? inspoReady : toolsReady;
@@ -930,7 +936,7 @@ export function Catalog() {
               >
                 All in {selectedCategory?.label ?? "category"}
               </button>
-              {currentCategoryLanes.map((item) => (
+              {pageCategoryLanes.map((item) => (
                 <CategoryChip
                   key={item.id}
                   item={item}
@@ -955,7 +961,7 @@ export function Catalog() {
                   />
                   <button type="submit">Add</button>
                 </form>
-              ) : currentCategoryLanes.length === 0 ? (
+              ) : pageCategoryLanes.length === 0 ? (
                 <p className="hint">No lanes in this category yet.</p>
               ) : null}
             </div>
@@ -1023,7 +1029,7 @@ export function Catalog() {
               >
                 All in {selectedCategory?.label ?? "category"}
               </button>
-              {currentCategoryLanes.map((item) => (
+              {pageCategoryLanes.map((item) => (
                 <CategoryChip
                   key={item.id}
                   item={item}
@@ -1048,7 +1054,7 @@ export function Catalog() {
                   />
                   <button type="submit">Add</button>
                 </form>
-              ) : currentCategoryLanes.length === 0 ? (
+              ) : pageCategoryLanes.length === 0 ? (
                 <p className="hint">No lanes in this category yet.</p>
               ) : null}
             </div>
@@ -1116,7 +1122,7 @@ export function Catalog() {
               >
                 All in {selectedCategory?.label ?? "category"}
               </button>
-              {currentCategoryLanes.map((item) => (
+              {pageCategoryLanes.map((item) => (
                 <CategoryChip
                   key={item.id}
                   item={item}
@@ -1141,7 +1147,7 @@ export function Catalog() {
                   />
                   <button type="submit">Add</button>
                 </form>
-              ) : currentCategoryLanes.length === 0 ? (
+              ) : pageCategoryLanes.length === 0 ? (
                 <p className="hint">No lanes in this category yet.</p>
               ) : null}
             </div>
