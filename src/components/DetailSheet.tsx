@@ -62,7 +62,12 @@ export function DetailSheet({
 }: Props) {
   const item = selection?.item;
   const url = item?.url ?? "";
-  const repo = url ? parseGithubRepo(url) : null;
+  const urlRepo = url ? parseGithubRepo(url) : null;
+  const repo =
+    urlRepo ??
+    (selection?.type === "tool" && selection.item.repo
+      ? parseGithubRepo(`https://github.com/${selection.item.repo}`)
+      : null);
   const [image, setImage] = useState("");
   const [remoteDescription, setRemoteDescription] = useState("");
   const [failed, setFailed] = useState(false);
@@ -441,9 +446,15 @@ export function DetailSheet({
               <p className="sheet-desc">{description}</p>
               <dl className="sheet-meta">
                 <div>
-                  <dt>{selection.type === "tool" && (selection.item.command || isCommandValue(url)) ? "Command" : "Link"}</dt>
-                  <dd>{selection.type === "tool" && selection.item.command ? selection.item.command : repo ? repo.full : hostname(url)}</dd>
+                  <dt>{selection.type === "tool" && (selection.item.command || isCommandValue(url)) ? "Command" : urlRepo ? "GitHub repo" : "Website"}</dt>
+                  <dd>{selection.type === "tool" && selection.item.command ? selection.item.command : urlRepo ? urlRepo.full : hostname(url)}</dd>
                 </div>
+                {selection.type === "tool" && repo && !urlRepo ? (
+                  <div>
+                    <dt>GitHub repo</dt>
+                    <dd>{repo.full}</dd>
+                  </div>
+                ) : null}
                 <div>
                   <dt>{selection.type === "inspo" ? "Type" : selection.type === "skill" ? "Format" : "Category"}</dt>
                   <dd>
@@ -516,6 +527,11 @@ export function DetailSheet({
                     Open site
                   </a>
                 )}
+                {selection.type === "tool" && repo && !urlRepo ? (
+                  <a className="ghost" href={`https://github.com/${repo.full}`} target="_blank" rel="noreferrer">
+                    Open GitHub
+                  </a>
+                ) : null}
                 {admin ? (
                   <button type="button" className="ghost" onClick={() => setEditing(true)}>
                     Edit card

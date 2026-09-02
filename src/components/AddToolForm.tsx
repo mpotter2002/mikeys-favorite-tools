@@ -316,7 +316,7 @@ export function AddToolForm({ onAdd, categories = CATEGORIES, kinds = KINDS, sta
                     : "Looks complete. Save it or tweak first."}
           </p>
           <div className="add-actions">
-            <button type="submit">Save to inbox</button>
+            <button type="submit">Save to list</button>
             <button type="button" className="ghost" onClick={reset}>
               Cancel
             </button>

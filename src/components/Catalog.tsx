@@ -62,6 +62,33 @@ import { SkillCard } from "@/components/SkillCard";
 import { DetailSheet } from "@/components/DetailSheet";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
+function repairInboxIds(items: InboxTool[]) {
+  const knownIds = new Map(catalog.map((item) => [item.id, item.url]));
+  let changed = false;
+
+  const repaired = items.map((item) => {
+    const existingUrl = knownIds.get(item.id);
+    if (!existingUrl || existingUrl === item.url) {
+      knownIds.set(item.id, item.url);
+      return item;
+    }
+
+    const baseId = `${item.id}-${slugify(item.url) || "site"}`;
+    let id = baseId;
+    let suffix = 2;
+    while (knownIds.has(id) && knownIds.get(id) !== item.url) {
+      id = `${baseId}-${suffix}`;
+      suffix += 1;
+    }
+
+    knownIds.set(id, item.url);
+    changed = true;
+    return { ...item, id };
+  });
+
+  return { items: repaired, changed };
+}
+
 export function Catalog() {
   const [lane, setLane] = useState<Lane>("tools");
   const [query, setQuery] = useState("");
@@ -94,7 +121,10 @@ export function Catalog() {
   const [newSubcategory, setNewSubcategory] = useState("");
 
   useEffect(() => {
-    setInbox(readInbox());
+    const storedInbox = readInbox();
+    const repairedInbox = repairInboxIds(storedInbox);
+    setInbox(repairedInbox.items);
+    if (repairedInbox.changed) writeInbox(repairedInbox.items);
     setInspoInbox(readInspoInbox());
     setSkillInbox(readSkillInbox());
     setToolEdits(readToolEdits());
@@ -181,7 +211,7 @@ export function Catalog() {
     [tools, skillsRaw, inspoRaw],
   );
   const catalogTools = useMemo(
-    () => tools.filter((tool) => lanesOfTool(tool).includes("tools")),
+    () => tools.filter((tool) => lanesOfTool(tool).includes("tools") && !isMineTool(tool)),
     [tools],
   );
   const searching = query.trim().length > 0;
@@ -233,7 +263,7 @@ export function Catalog() {
 
   function addTool(tool: InboxTool) {
     const commandLike = Boolean(tool.command) || /\b(npx|pnpm|yarn|bunx|npm|uvx|pipx)\b/i.test(tool.url);
-    const nextTool = commandLike
+    const preparedTool = commandLike
       ? {
           ...tool,
           command: tool.command || tool.url,
@@ -245,6 +275,55 @@ export function Catalog() {
           subcategories: Array.from(new Set([...(tool.subcategories ?? []), "plugins"])),
         }
       : tool;
+    const matchingMineTool = commandLike
+      ? undefined
+      : toolsRaw.find(
+          (item) =>
+            isMineTool(item) &&
+            slugify(item.name) === slugify(preparedTool.name) &&
+            item.url !== preparedTool.url,
+        );
+
+    if (matchingMineTool) {
+      const useIncomingDescription =
+        preparedTool.description.trim() && preparedTool.description !== "Saved from a dropped link.";
+      const combinedTool: Tool = {
+        ...matchingMineTool,
+        url: preparedTool.url,
+        description: useIncomingDescription ? preparedTool.description : matchingMineTool.description,
+        tags: Array.from(new Set([...matchingMineTool.tags, ...preparedTool.tags, "mine"])),
+        source: "mine",
+      };
+      const nextEdits = { ...toolEdits, [combinedTool.id]: combinedTool };
+      setToolEdits(nextEdits);
+      writeToolEdits(nextEdits);
+      setInbox((current) => {
+        const next = current.filter((item) => item.id !== combinedTool.id && item.url !== preparedTool.url);
+        writeInbox(next);
+        return next;
+      });
+      unhideItem(combinedTool.id);
+      setLane("mine");
+      setCategory(categoriesOf(combinedTool)[0] ?? "");
+      setSubcategory("all");
+      setQuery("");
+      setKind("all");
+      setStatus("all");
+      setGithubOnly(false);
+      setInspoKind("");
+      setSkillFormat("");
+      return;
+    }
+
+    const existingById = [...catalog, ...inbox].find((item) => item.id === preparedTool.id);
+    const nextTool =
+      existingById && existingById.url !== preparedTool.url
+        ? {
+            ...preparedTool,
+            id: `${preparedTool.id}-${slugify(preparedTool.url) || crypto.randomUUID()}`,
+          }
+        : preparedTool;
+
     if (commandLike) {
       addCategory("Agent", "Agent tools, frameworks, and plugins.", false);
       addSubcategory("Plugins", "agent", false);
@@ -253,6 +332,20 @@ export function Catalog() {
     setInbox(next);
     writeInbox(next);
     unhideItem(nextTool.id);
+
+    const savedLanes = lanesOfTool(nextTool);
+    const targetLane = savedLanes.includes(lane) ? lane : savedLanes[0] ?? "tools";
+    const targetCategory = categoriesOf(nextTool)[0] ?? "";
+
+    setLane(targetLane);
+    setCategory(targetCategory);
+    setSubcategory("all");
+    setQuery("");
+    setKind("all");
+    setStatus("all");
+    setGithubOnly(false);
+    setInspoKind("");
+    setSkillFormat("");
   }
 
   function addOption(label: string, extras: Option[], builtins: Option[]) {
@@ -677,7 +770,7 @@ export function Catalog() {
           </div>
           <div>
             <strong>{skillItems.length}</strong>
-            <span>skills</span>
+            <span>AI / agents</span>
           </div>
         </div>
       </header>
@@ -709,7 +802,7 @@ export function Catalog() {
           className={lane === "skills" ? "lane on" : "lane"}
           onClick={() => chooseLane("skills")}
         >
-          Skills
+          AI / Agents
         </button>
         <button
           type="button"
@@ -722,11 +815,11 @@ export function Catalog() {
 
       <div className="toolbar">
         <label className="search">
-          <span className="sr-only">{lane === "inspo" ? "Search inspo" : lane === "mine" ? "Search tools I made" : lane === "stack" ? "Search current stack" : lane === "skills" ? "Search skills" : "Search tools and resources"}</span>
+          <span className="sr-only">{lane === "inspo" ? "Search inspo" : lane === "mine" ? "Search tools I made" : lane === "stack" ? "Search current stack" : lane === "skills" ? "Search AI and agent resources" : "Search tools and resources"}</span>
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder={lane === "inspo" ? "Search sites, people, tags" : lane === "mine" ? "Search the tools I made" : lane === "stack" ? "Search what I am using now" : lane === "skills" ? "Search markdown, yaml, json, packs" : "Search tools, repos, resources"}
+            placeholder={lane === "inspo" ? "Search sites, people, tags" : lane === "mine" ? "Search the tools I made" : lane === "stack" ? "Search what I am using now" : lane === "skills" ? "Search agents, skills, MCPs, frameworks" : "Search tools, repos, resources"}
           />
         </label>
       </div>
@@ -1078,7 +1171,7 @@ export function Catalog() {
           {selectedSkillFormat?.description ? (
             <p className="hint category-desc">{selectedSkillFormat.description}</p>
           ) : (
-            <p className="hint category-desc">Skills can be markdown, YAML, JSON, configs, or a whole pack. Pick a format, or All.</p>
+            <p className="hint category-desc">Agent resources can include skills, configs, MCP tools, and framework packs. Pick a format, or All.</p>
           )}
           {admin && currentInbox.length > 0 ? (
             <div className="status-row">
@@ -1121,7 +1214,7 @@ export function Catalog() {
           {lane === "inspo"
             ? "Choose sites, people, or All inspo to start looking."
             : lane === "skills"
-              ? "Choose markdown, YAML, JSON, config, packs, or All to start looking."
+              ? "Choose a format, or All, to start looking through AI and agent resources."
             : "Choose a category to start looking, or All if you want the whole lane."}
         </div>
       ) : showing.length === 0 ? (
@@ -1133,7 +1226,7 @@ export function Catalog() {
             : lane === "mine"
               ? "Nothing matches. Drop one of your repos here to add a tool you made."
               : lane === "skills"
-                ? "Nothing matches. Drop a SKILL.md, YAML, JSON, or skill repo here."
+                ? "Nothing matches. Drop a skill file, config, or agent resource here."
             : "Nothing matches. Drop the filter or paste a GitHub URL into Add a tool."}
         </div>
       ) : (

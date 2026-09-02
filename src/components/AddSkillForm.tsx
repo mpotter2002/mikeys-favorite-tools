@@ -193,7 +193,7 @@ export function AddSkillForm({ onAdd }: Props) {
             {looking ? "Looking the link up…" : error || "Add anything it missed, then save."}
           </p>
           <div className="add-actions">
-            <button type="submit">Save to skills</button>
+            <button type="submit">Save to AI / Agents</button>
             <button type="button" className="ghost" onClick={reset}>
               Cancel
             </button>

@@ -5,7 +5,7 @@ export const LANE_OPTIONS: { id: Lane; label: string }[] = [
   { id: "tools", label: "Tools and resources" },
   { id: "stack", label: "Current stack" },
   { id: "mine", label: "Built by Mikey" },
-  { id: "skills", label: "Skills" },
+  { id: "skills", label: "AI / Agents" },
   { id: "inspo", label: "Inspo" },
 ];
 
