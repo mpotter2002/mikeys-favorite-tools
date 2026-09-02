@@ -639,7 +639,7 @@ export function Catalog() {
         )}
       </div>
       <header className="hero">
-        <div>
+        <div className="hero-copy">
           <p className="kicker">Personal stack</p>
           <h1>Mikey&apos;s Favorite Tools</h1>
           <p className="lede">

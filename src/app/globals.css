@@ -65,10 +65,15 @@ body {
 
 .hero {
   display: flex;
-  justify-content: space-between;
-  gap: 32px;
-  align-items: end;
-  margin-bottom: 28px;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 22px;
+  margin-bottom: 18px;
+}
+
+.hero-copy {
+  width: 100%;
 }
 
 .chrome {
@@ -114,8 +119,8 @@ h1 {
 }
 
 .lede {
-  max-width: 46ch;
-  margin: 14px 0 0;
+  max-width: 54ch;
+  margin: 14px auto 0;
   color: var(--muted);
   font-size: 16px;
   line-height: 1.5;
@@ -123,7 +128,9 @@ h1 {
 
 .stats {
   display: flex;
-  gap: 18px;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
 }
 
 .stats div {
@@ -520,7 +527,6 @@ h1 {
 }
 
 @media (max-width: 720px) {
-  .hero,
   .add-grid {
     display: grid;
     grid-template-columns: 1fr;
@@ -590,7 +596,7 @@ h1 {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
-  margin: 8px auto 18px;
+  margin: 0 auto 18px;
   justify-content: center;
   width: fit-content;
   max-width: 100%;
