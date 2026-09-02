@@ -59,6 +59,7 @@ import { ToolCard } from "@/components/ToolCard";
 import { InspoCard } from "@/components/InspoCard";
 import { DetailSheet } from "@/components/DetailSheet";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { BrandMark } from "@/components/BrandMark";
 
 type BrowseLane = Lane | "all";
 
@@ -841,13 +842,14 @@ export function Catalog() {
     <div className="shell">
       <div className="chrome">
         <ThemeToggle />
-        {admin ? (
-          <button type="button" className="ghost" onClick={logout}>
-            Log out
-          </button>
-        ) : (
-          <span />
-        )}
+        <div className="chrome-actions">
+          {admin ? (
+            <button type="button" className="ghost" onClick={logout}>
+              Log out
+            </button>
+          ) : null}
+          <BrandMark />
+        </div>
       </div>
       <header className="hero">
         <div className="hero-copy">

@@ -993,3 +993,20 @@ a.ghost,
 .sheet-meta dd {
   overflow-wrap: anywhere;
 }
+
+.chrome-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+}
+
+.brand-mark {
+  display: block;
+  width: 42px;
+  height: 42px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  object-fit: cover;
+  background: var(--card);
+}

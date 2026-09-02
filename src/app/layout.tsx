@@ -19,7 +19,7 @@ export const metadata: Metadata = {
   description: "Mikey's personal catalog of design tools, agent tools, and GitHub repos.",
 };
 
-const themeScript = `(function(){try{var k="toolfolio.theme.v1";var s=localStorage.getItem(k);var t=s==="light"||s==="dark"?s:(window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");document.documentElement.dataset.theme=t;}catch(e){document.documentElement.dataset.theme="light";}})();`;
+const themeScript = `(function(){try{var k="toolfolio.theme.v1";var s=localStorage.getItem(k);var t=s==="light"||s==="dark"?s:"dark";document.documentElement.dataset.theme=t;var f=function(){var i=document.getElementById("theme-favicon");if(!i){i=document.createElement("link");i.id="theme-favicon";i.rel="icon";document.head.appendChild(i)}i.setAttribute("href","/favicon-"+t+".png")};document.addEventListener("DOMContentLoaded",f);}catch(e){document.documentElement.dataset.theme="dark";}})();`;
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
