@@ -734,7 +734,7 @@ export function Catalog() {
   function chooseLane(next: BrowseLane) {
     setLane(next);
     setQuery("");
-    setCategory(next === "all" ? "all" : "");
+    setCategory("all");
     setKind("all");
     setSubcategory("all");
     setStatus("all");
