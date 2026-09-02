@@ -17,7 +17,7 @@ function setFavicon(theme: Theme) {
     icon.rel = "icon";
     document.head.appendChild(icon);
   }
-  icon.href = `/branding/favicon-${theme}.png`;
+  icon.href = `/branding/favicon-${theme}.png?v=2`;
 }
 
 export function applyTheme(theme: Theme) {

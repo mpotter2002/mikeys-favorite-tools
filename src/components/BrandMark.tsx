@@ -16,7 +16,7 @@ export function BrandMark() {
   return (
     <img
       className="brand-mark"
-      src={theme === "dark" ? "/branding/mark-dark.png" : "/branding/mark-light.png"}
+      src={theme === "dark" ? "/branding/mark-dark.png?v=2" : "/branding/mark-light.png?v=2"}
       alt="Mikey's Favorites"
       width={42}
       height={42}
