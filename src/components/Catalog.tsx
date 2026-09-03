@@ -787,7 +787,7 @@ export function Catalog() {
     setSubcategory("all");
     setStatus("all");
     setGithubOnly(false);
-    setInspoKind("");
+    setInspoKind(next === "inspo" ? "all" : "");
   }
 
   function CategoryChip({
